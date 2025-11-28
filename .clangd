@@ -1,0 +1,10 @@
+CompileFlags:
+  CompilationDatabase: build
+  Add:
+    [
+      -std=c++17,
+      -Wall,
+      -Wextra,
+      -Ilibraries/raygui/include,
+      -Ilibraries/raylib/src,
+    ]
