@@ -47,10 +47,9 @@ int main() {
 
         p2->setCoord(GetMousePosition());
 
-        room.draw();
-
         ClearBackground(RAYWHITE);
 
+        room.draw();
         EndDrawing();
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <utility>
 #include <vector>
 
 #include "raylib.h"
@@ -82,9 +83,8 @@ class WallRound: public Wall {
 
     float radius;   // Радиус дуги
     Vector2 center; // Центр дуги
-
-public:
-    WallRound(Point *start, Point *end): Wall(start, end) {}
+    bool isBig;
+    bool orient;
 
     void updateParams() {
         Vector2 m = Vector2{
@@ -93,17 +93,45 @@ public:
         };
         float dx = start->getX() - end->getX();
         float dy = start->getY() - end->getY();
-
         float d = std::sqrt(dx * dx + dy * dy);
 
-        radius = d / 2;
+        radius = d;
 
         float h = std::sqrt(radius * radius - d * d / 4);
+        if (orient) {
+            center = Vector2{m.x + h * dy / d, m.y - h * dx / d};
+        } else {
+            center = Vector2{m.x - h * dy / d, m.y + h * dx / d};
+        }
 
-        center = Vector2{m.x - h * dy / d, m.y + h * dx / d};
+        updateAngles();
+    }
 
-        startAngle = atan2f(dy, dx) * RAD2DEG + 180;
-        endAngle = startAngle + 2 * asinf(d / (2 * radius)) * RAD2DEG;
+    void updateAngles() {
+        startAngle =
+            atan2f(start->getY() - center.y, start->getX() - center.x) *
+            RAD2DEG;
+        endAngle =
+            atan2f(end->getY() - center.y, end->getX() - center.x) * RAD2DEG;
+
+        if (startAngle < endAngle) {
+            startAngle += 360.0f;
+        }
+
+        if (isBig) {
+            startAngle -= 360;
+        }
+    }
+
+public:
+    WallRound(Point *start, Point *end): Wall(start, end) {
+        isBig = false;
+        orient = false;
+    }
+
+    void toggleOrient() {
+        orient = !orient;
+        updateParams();
     }
 
     void draw() {
@@ -126,12 +154,16 @@ public:
         return points.back();
     }
 
-    void addWallLine(Point *start, Point *end) {
-        walls.push_back(new WallLine(start, end));
+    WallLine *addWallLine(Point *start, Point *end) {
+        WallLine *wall = new WallLine(start, end);
+        walls.push_back(wall);
+        return wall;
     }
 
-    void addWallRound(Point *start, Point *end) {
-        walls.push_back(new WallRound(start, end));
+    WallRound *addWallRound(Point *start, Point *end) {
+        WallRound *wall = new WallRound(start, end);
+        walls.push_back(wall);
+        return wall;
     }
 
     void movePoint(Point *p, float x, float y) { p->setCoord(Vector2{x, y}); }
