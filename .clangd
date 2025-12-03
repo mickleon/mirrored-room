@@ -7,4 +7,5 @@ CompileFlags:
       -Wextra,
       -Ilibraries/raygui/include,
       -Ilibraries/raylib/src,
+      -Ilibraries/json/include,
     ]

@@ -17,8 +17,8 @@ set(SOURCES
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} LINK_PRIVATE raylib)
 target_link_libraries(${PROJECT_NAME} LINK_PRIVATE raygui)
+target_link_libraries(${PROJECT_NAME} LINK_PRIVATE nlohmann_json::nlohmann_json)
 set_property(
     TARGET ${PROJECT_NAME}
     PROPERTY VS_DEBUGGER_WORKING_DIRECTORY ${SOLUTION_ROOT}
 )
-
