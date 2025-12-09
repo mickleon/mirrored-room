@@ -19,6 +19,9 @@ Font MyUI::initFont(const char *fontPath, int fontSize) {
 }
 
 MyUI::MyUI(const char *fontPath) {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+    InitWindow(1024, 700, "Зеркaльная комната");
+
     fontSize = 20;
     font = initFont(fontPath, fontSize);
     screen = Vector2{1024, 700};
@@ -31,6 +34,13 @@ MyUI::MyUI(const char *fontPath) {
         Rectangle{canvas.width, screen.y / 2, rightPanelWidth, screen.y / 2};
 
     hintPosition = {500, 500};
+
+    SetWindowMinSize(400, 300);
+    SetTargetFPS(60);
+    SetExitKey(-1);
+
+    GuiSetFont(font);
+    GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize);
 }
 
 void MyUI::drawHint(const char *message) {
