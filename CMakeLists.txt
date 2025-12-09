@@ -12,6 +12,9 @@ add_subdirectory(libraries)
 
 set(SOURCES
     main.cpp
+    Room.cpp
+    Utils.cpp
+    MyUI.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
