@@ -103,7 +103,7 @@ void WallRound::draw() {
 void Room::addPoint(const Vector2 &coord) {
     for (Point &point : points) {
         float d = distance(point.getCoord(), coord);
-        if (d < 8) {
+        if (d < minimalDistance) {
             throw Room::PointsAreTooClose();
         }
     }

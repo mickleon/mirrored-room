@@ -4,6 +4,10 @@
 
 #include "MyUI.h"
 
+bool Button::draw() {
+    return GuiButton(rect, text);
+}
+
 Font MyUI::initFont(const char *fontPath, int fontSize) {
     int charsCount = 0;
     int* chars = LoadCodepoints(
@@ -27,6 +31,16 @@ MyUI::MyUI(const char *fontPath) {
     font = initFont(fontPath, fontSize);
     screen = Vector2{1024, 700};
     rightPanelWidth = 300;
+    canvas = Rectangle{0, 40, screen.x - rightPanelWidth, screen.y - 40};
+    panel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y};
+
+    importButton = {Rectangle{5, 5, 30, 30}, "#01#"};
+    exportButton = {Rectangle{40, 5, 30, 30}, "#02#"};
+    normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
+    addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
+    addRoundButton = {Rectangle{160, 5, 30, 30}, "#23#"};
+
+    mode = Normal;
 
     updateSize();
 
@@ -35,7 +49,7 @@ MyUI::MyUI(const char *fontPath) {
     hintDuration = 3.0f;
     hintActive = false;
 
-    SetWindowMinSize(400, 300);
+    SetWindowMinSize(500, 300);
     SetTargetFPS(60);
     SetExitKey(-1);
 
@@ -49,23 +63,53 @@ void MyUI::showHint(const char *message) {
     hintActive = true;
 }
 
-void MyUI::drawPanels() {
-    // Верхняя правая панель
-    GuiPanel(topPanel, "Панель 1");
+void MyUI::drawPanel() {
+    GuiPanel(panel, "Панель 1");
+}
 
-    // Нижняя правая панель
-    GuiPanel(bottomPanel, "Панель 2");
+void MyUI::handleButtons() {
+    Mode newMode = mode;
+    if (importButton.draw()) {
+        newMode = Normal;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+    }
+
+    if (exportButton.draw()) {
+        newMode = Normal;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+    }
+
+    if (normalButton.draw()) {
+        newMode = Normal;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+    }
+
+    if (addLineButton.draw()) {
+        newMode = AddLine;
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    }
+
+    if (addRoundButton.draw()) {
+        newMode = AddRound;
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    }
+
+    mode = newMode;
 }
 
 void MyUI::updateSize() {
     screen.x = GetScreenWidth();
     screen.y = GetScreenHeight();
 
-    canvas = Rectangle{0, 0, screen.x - rightPanelWidth, screen.y};
+    canvas.x = 0;
+    canvas.y = 40;
+    canvas.width = screen.x - rightPanelWidth;
+    canvas.height = screen.y - 40;
 
-    topPanel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y / 2};
-    bottomPanel =
-        Rectangle{canvas.width, screen.y / 2, rightPanelWidth, screen.y / 2};
+    panel.x = canvas.width;
+    panel.y = 0;
+    panel.width = rightPanelWidth;
+    panel.height = screen.y;
 
     hintPosition = {5, screen.y - 25};
     hintBar = {0, screen.y - 30, canvas.width, 30};

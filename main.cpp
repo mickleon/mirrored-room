@@ -9,6 +9,7 @@
 
 const Color Wall::color = BROWN;
 const float Wall::thick = 4;
+const int Room::minimalDistance = 20;
 
 int main() {
     MyUI ui = MyUI("assets/fonts/AdwaitaSans-Regular.ttf");
@@ -18,9 +19,16 @@ int main() {
         ui.updateSize();
 
         BeginDrawing();
-        ClearBackground(RAYWHITE);
+
+        ClearBackground(LIGHTGRAY);
+        DrawRectangleRec(ui.canvas, RAYWHITE);
+        ui.updateHint();
+        ui.handleButtons();
 
         // Область для рисования
+        BeginScissorMode(
+            ui.canvas.x, ui.canvas.y, ui.canvas.width, ui.canvas.height
+        );
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
             CheckCollisionPointRec(GetMousePosition(), ui.canvas)) {
             try {
@@ -32,8 +40,7 @@ int main() {
         room.draw();
         EndScissorMode();
 
-        ui.updateHint();
-        ui.drawPanels();
+        ui.drawPanel();
 
         EndDrawing();
     }

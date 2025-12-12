@@ -83,13 +83,15 @@ private:
     vector<Point> points; // Вершины многоугольника
     vector<Wall> walls;   // Стены
 
+    void addWallLine(Point &start, Point &end);
+    void addWallRound(Point &start, Point &end);
+
 public:
+    const int static minimalDistance;
+
     class PointsAreTooClose {};
 
     void addPoint(const Vector2 &coord);
-
-    void addWallLine(Point &start, Point &end);
-    void addWallRound(Point &start, Point &end);
 
     void movePoint(Point &p, float x, float y);
 
