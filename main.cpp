@@ -7,30 +7,43 @@
 #include "MyUI.h"
 #include "Room.h"
 
-const Color Wall::color = BROWN;
-const float Wall::thick = 4;
-const int Room::minimalDistance = 20;
-
 int main() {
     MyUI ui = MyUI("assets/fonts/AdwaitaSans-Regular.ttf");
     Room room;
 
     while (!WindowShouldClose()) {
         ui.updateSize();
+        ui.fileDialog.update();
+
+        if (!ui.fileDialog.file().empty()) {
+            std::string filePath = ui.fileDialog.file();
+
+            if (ui.mode == Import) {
+                printf("Открыть файл: %s\n", filePath.c_str());
+                // room.load(filePath);
+            } else if (ui.mode == Export) {
+                printf("Сохранить в файл: %s\n", filePath.c_str());
+                // room.save(filePath);
+            }
+
+            ui.fileDialog.clearSelection();
+            ui.mode = Normal;
+        }
 
         BeginDrawing();
 
         ClearBackground(LIGHTGRAY);
-        DrawRectangleRec(ui.canvas, RAYWHITE);
+        DrawRectangleRec(ui.getCanvas(), RAYWHITE);
         ui.updateHint();
         ui.handleButtons();
 
         // Область для рисования
         BeginScissorMode(
-            ui.canvas.x, ui.canvas.y, ui.canvas.width, ui.canvas.height
+            ui.getCanvas().x, ui.getCanvas().y, ui.getCanvas().width,
+            ui.getCanvas().height
         );
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
-            CheckCollisionPointRec(GetMousePosition(), ui.canvas)) {
+        if (ui.mode == AddLine && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
+            CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
             try {
                 room.addPoint(GetMousePosition());
             } catch (Room::PointsAreTooClose) {
@@ -41,6 +54,7 @@ int main() {
         EndScissorMode();
 
         ui.drawPanel();
+        ui.fileDialog.draw();
 
         EndDrawing();
     }

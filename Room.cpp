@@ -133,3 +133,7 @@ void Room::draw() {
         point.draw();
     }
 }
+
+const Color Wall::color = BROWN;
+const float Wall::thick = 4;
+const int Room::minimalDistance = 20;
