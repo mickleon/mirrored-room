@@ -15,6 +15,7 @@ set(SOURCES
     Room.cpp
     Utils.cpp
     MyUI.cpp
+    FileDialog.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})

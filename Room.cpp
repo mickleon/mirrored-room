@@ -1,7 +1,22 @@
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+
+#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
 
 #include "Room.h"
 #include "Utils.h"
+
+using nlohmann::json, std::ofstream, std::cout;
+namespace fs = std::filesystem;
+
+const Color Wall::color = BROWN;
+const float Wall::thick = 4;
+const int Room::minimalDistance = 20;
 
 Point::Point(const Vector2 &coord) {
     Point::coord = coord;
@@ -134,6 +149,71 @@ void Room::draw() {
     }
 }
 
-const Color Wall::color = BROWN;
-const float Wall::thick = 4;
-const int Room::minimalDistance = 20;
+void Room::load(fs::path filePath) {
+    std::string fileName = filePath.filename().string();
+    if (!fs::exists(filePath)) {
+        throw std::runtime_error("Файл не найден: " + fileName);
+    }
+
+    if (!fs::is_regular_file(filePath)) {
+        throw std::runtime_error(
+            "Указанный путь не является файлом: " + fileName
+        );
+    }
+
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        throw std::runtime_error(
+            "Не удалось открыть файл для чтения: " + fileName
+        );
+    }
+
+    json dump;
+    file >> dump;
+
+    if (file.bad()) {
+        throw std::runtime_error("Ошибка чтения файла: " + fileName);
+    }
+
+    if (!file.eof() && file.fail()) {
+        throw std::runtime_error("Ошибка формата файла: " + fileName);
+    }
+
+    file.close();
+
+    clear();
+}
+
+void Room::save(fs::path filePath) {
+    std::string fileName = filePath.filename().string();
+    if (!fs::exists(filePath.parent_path())) {
+        throw std::runtime_error("Некоррректное имя файла: " + fileName);
+    }
+
+    std::ofstream file(filePath);
+
+    if (!file.is_open()) {
+        throw std::runtime_error(
+            "Не удалось открыть файл для записи: " + fileName
+        );
+    }
+
+    json dump = {
+        {"happy", true},
+        {"pi", 3.141},
+    };
+
+    file << dump.dump(4) << '\n';
+
+    if (file.fail()) {
+        throw std::runtime_error("Нет прав на запись в файл: " + fileName);
+    }
+
+    file.close();
+}
+
+void Room::clear() {
+    points.clear();
+    walls.clear();
+}

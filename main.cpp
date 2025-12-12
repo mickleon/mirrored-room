@@ -1,8 +1,9 @@
-#include "nlohmann/json.hpp"
 #include "raylib.h"
+#include <cstdio>
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
+#undef RAYGUI_IMPLEMENTATION
 
 #include "MyUI.h"
 #include "Room.h"
@@ -13,21 +14,9 @@ int main() {
 
     while (!WindowShouldClose()) {
         ui.updateSize();
-        ui.fileDialog.update();
 
-        if (!ui.fileDialog.file().empty()) {
-            std::string filePath = ui.fileDialog.file();
-
-            if (ui.mode == Import) {
-                printf("Открыть файл: %s\n", filePath.c_str());
-                // room.load(filePath);
-            } else if (ui.mode == Export) {
-                printf("Сохранить в файл: %s\n", filePath.c_str());
-                // room.save(filePath);
-            }
-
-            ui.fileDialog.clearSelection();
-            ui.mode = Normal;
+        if (ui.fileDialog.isFileSelected()) {
+            printf("%s\n", ui.fileDialog.filePath().c_str());
         }
 
         BeginDrawing();
@@ -54,7 +43,12 @@ int main() {
         EndScissorMode();
 
         ui.drawPanel();
-        ui.fileDialog.draw();
+
+        if (ui.fileDialog.isActive()) {
+            GuiLock();
+        }
+        GuiUnlock();
+        ui.fileDialog.update();
 
         EndDrawing();
     }

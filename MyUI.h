@@ -1,51 +1,10 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 #include "raylib.h"
 
-using std::string, std::vector;
-
-enum FileDialogMode { DIALOG_OPEN, DIALOG_SAVE };
-
-class FileDialog {
-private:
-    bool showDialog = false;
-    FileDialogMode dialogMode = DIALOG_OPEN;
-    string currentPath;
-    string selectedFile;
-    vector<string> directories;
-    vector<string> files;
-    Vector2 scrollPosition = {0, 0};
-    Rectangle dialogBounds = {50, 80, 400, 400};
-    int selectedIndex = -1;
-
-    char fileNameBuffer[256] = {0};
-    bool fileNameEditMode = false;
-
-public:
-    FileDialog();
-
-    string file() const;
-
-    void show(FileDialogMode mode);
-
-    void update();
-
-    void draw();
-
-    void clearSelection();
-
-private:
-    void refreshDirectory();
-
-    void handleItemSelection(int index);
-
-    void confirmSelection();
-
-    string getItemName(int index) const;
-};
+#include "FileDialog.h"
 
 class Button {
 public:
@@ -60,33 +19,37 @@ enum UIMode { Normal, AddLine, AddRound, Import, Export };
 class MyUI {
 private:
     Font font;
-    int fontSize;
+    int fontSize = 20;
 
     Font initFont(const char *fontPath, int fontSize);
-    float rightPanelWidth;
+    float rightPanelWidth = 300;
 
-    std::string currentHint;
-    float hintTimer;
-    float hintDuration;
-    bool hintActive;
+    std::string currentHint = "";
+    float hintTimer = 0;
+    float hintDuration = 3.0f;
+    bool hintActive = false;
 
-    Vector2 screen;
-    Rectangle panel;
-    Rectangle canvas;
+    Vector2 screen = Vector2{1024, 700};
+    Rectangle canvas =
+        Rectangle{0, 40, screen.x - rightPanelWidth, screen.y - 40};
+    Rectangle panel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y};
+
     Vector2 hintPosition;
     Rectangle hintBar;
 
-    Button importButton;
-    Button exportButton;
-    Button normalButton;
-    Button addLineButton;
-    Button addRoundButton;
+    Button importButton = {Rectangle{5, 5, 30, 30}, "#01#"};
+    Button exportButton = {Rectangle{40, 5, 30, 30}, "#02#"};
+    Button normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
+    Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
+    Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#23#"};
 
 public:
-    UIMode mode;
+    MyUI(const char *fontPath);
+
     FileDialog fileDialog;
 
-    MyUI(const char *fontPath);
+    UIMode mode = Normal;
+
     void updateSize();
     void updateHint();
 

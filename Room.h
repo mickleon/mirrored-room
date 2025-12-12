@@ -1,11 +1,14 @@
 #pragma once
 
 #include <cmath>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 #include "raylib.h"
 
 using std::vector;
+namespace fs = std::filesystem;
 
 class Wall;
 
@@ -96,4 +99,8 @@ public:
     void movePoint(Point &p, float x, float y);
 
     void draw();
+
+    void load(fs::path filePath);
+    void save(fs::path filePath);
+    void clear();
 };
