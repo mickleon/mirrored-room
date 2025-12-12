@@ -16,6 +16,7 @@ int main() {
 
     while (!WindowShouldClose()) {
         ui.updateSize();
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
@@ -25,12 +26,13 @@ int main() {
             try {
                 room.addPoint(GetMousePosition());
             } catch (Room::PointsAreTooClose) {
-                ui.drawHint("Точки не могут находиться слишком близко");
+                ui.showHint("Точки не могут находиться слишком близко");
             }
         }
         room.draw();
         EndScissorMode();
 
+        ui.updateHint();
         ui.drawPanels();
 
         EndDrawing();

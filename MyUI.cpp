@@ -1,5 +1,6 @@
 #include "raygui.h"
 #include "raylib.h"
+#include <cstdio>
 
 #include "MyUI.h"
 
@@ -27,13 +28,12 @@ MyUI::MyUI(const char *fontPath) {
     screen = Vector2{1024, 700};
     rightPanelWidth = 300;
 
-    canvas = Rectangle{0, 0, screen.x - rightPanelWidth, screen.y};
+    updateSize();
 
-    topPanel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y / 2};
-    bottomPanel =
-        Rectangle{canvas.width, screen.y / 2, rightPanelWidth, screen.y / 2};
-
-    hintPosition = {500, 500};
+    currentHint = "";
+    hintTimer = 0;
+    hintDuration = 3.0f;
+    hintActive = false;
 
     SetWindowMinSize(400, 300);
     SetTargetFPS(60);
@@ -43,8 +43,10 @@ MyUI::MyUI(const char *fontPath) {
     GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize);
 }
 
-void MyUI::drawHint(const char *message) {
-    DrawTextEx(font, message, hintPosition, fontSize, 0, GRAY);
+void MyUI::showHint(const char *message) {
+    currentHint = message;
+    hintTimer = 0;
+    hintActive = true;
 }
 
 void MyUI::drawPanels() {
@@ -64,4 +66,24 @@ void MyUI::updateSize() {
     topPanel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y / 2};
     bottomPanel =
         Rectangle{canvas.width, screen.y / 2, rightPanelWidth, screen.y / 2};
+
+    hintPosition = {5, screen.y - 25};
+    hintBar = {0, screen.y - 30, canvas.width, 30};
+}
+
+void MyUI::updateHint() {
+    if (hintActive) {
+        hintTimer += GetFrameTime();
+
+        if (hintTimer >= hintDuration) {
+            hintActive = false;
+            currentHint = "";
+        }
+
+        DrawRectangleRec(hintBar, Fade(LIGHTGRAY, 0.5f));
+
+        DrawTextEx(
+            font, currentHint.c_str(), hintPosition, fontSize, 0, DARKGRAY
+        );
+    }
 }
