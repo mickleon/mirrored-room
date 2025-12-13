@@ -1,3 +1,32 @@
+/*******************************************************************************************
+ *
+ *   Window File Dialog v1.2 - Modal file dialog to open/save files
+ *
+ *   LICENSE: zlib/libpng
+ *
+ *   Copyright (c) 2019-2024 Ramon Santamaria (@raysan5)
+ *
+ *   This software is provided "as-is", without any express or implied warranty.
+ * In no event will the authors be held liable for any damages arising from the
+ * use of this software.
+ *
+ *   Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ *     1. The origin of this software must not be misrepresented; you must not
+ * claim that you wrote the original software. If you use this software in a
+ * product, an acknowledgment in the product documentation would be appreciated
+ * but is not required.
+ *
+ *     2. Altered source versions must be plainly marked as such, and must not
+ * be misrepresented as being the original software.
+ *
+ *     3. This notice may not be removed or altered from any source
+ * distribution.
+ *
+ **********************************************************************************************/
+
 #include <filesystem>
 #include <string.h>
 #include <string>
@@ -83,7 +112,8 @@ fs::path FileDialog::filePath() {
     return fullPath;
 }
 
-void FileDialog::update() {
+bool FileDialog::update() {
+    bool status = false;
     if (windowActive) {
         // update window dragging
         if (supportDrag) {
@@ -135,6 +165,7 @@ void FileDialog::update() {
                                       "Открыть файл";
 
         windowActive = !GuiWindowBox(windowBounds, windowTitle);
+        status = !windowActive;
 
         // Draw previous directory button + logic
         if (GuiButton(
@@ -195,7 +226,7 @@ void FileDialog::update() {
 
         GuiListViewEx(
             {windowBounds.x + 8, windowBounds.y + 48 + 20,
-             windowBounds.width - 16, windowBounds.height - 60 - 16 - 48},
+             windowBounds.width - 16, windowBounds.height - 60 - 16 - 48 - 10},
             (const char **)iconCStrings.data(), dirFiles.count,
             &filesListScrollIndex, &filesListActive, &itemFocused
         );
@@ -294,14 +325,16 @@ void FileDialog::update() {
         if (GuiButton(
                 {windowBounds.x + windowBounds.width - 104,
                  windowBounds.y + windowBounds.height - 48, 96, 24},
-                "Cancel"
+                "Отмена"
             )) {
             windowActive = false;
+            status = true;
         }
 
         // Exit on file selected
         if (SelectFilePressed) {
             windowActive = false;
+            status = true;
         }
 
         // File dialog has been closed
@@ -312,6 +345,7 @@ void FileDialog::update() {
             dirFiles.paths = nullptr;
         }
     }
+    return status;
 }
 
 void FileDialog::ReloadDirectoryFiles() {
@@ -355,10 +389,6 @@ void FileDialog::ReloadDirectoryFiles() {
             dirFilesIcon[i] = "#1#" + filename;
         }
     }
-}
-
-void FileDialog::show() {
-    show(dialogMode);
 }
 
 void FileDialog::show(Mode mode) {

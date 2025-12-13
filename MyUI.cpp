@@ -12,6 +12,14 @@ bool Button::draw() {
     return GuiButton(rect, text);
 }
 
+bool Button::draw(bool isActive) {
+    int status = GuiButton(rect, text);
+    if (isActive) {
+        DrawRectangleRec(rect, ColorAlpha(BLUE, 0.2));
+    }
+    return status;
+}
+
 Font MyUI::initFont(const char *fontPath, int fontSize) {
     int charsCount = 0;
     int* chars = LoadCodepoints(
@@ -54,36 +62,73 @@ void MyUI::drawPanel() {
     GuiPanel(panel, "Панель 1");
 }
 
-void MyUI::handleButtons() {
-    UIMode newMode = mode;
-    if (importButton.draw()) {
-        newMode = Import;
+void MyUI::setMode(UIMode newMode) {
+    switch (newMode) {
+    case UI_IMPORT: {
+        mode = UI_IMPORT;
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         fileDialog.show(FileDialog::FILE_DIALOG_OPEN);
+        break;
+    }
+    case UI_EXPORT: {
+        mode = UI_EXPORT;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        fileDialog.show(FileDialog::FILE_DIALOG_SAVE);
+        break;
+    }
+    case UI_NORMAL: {
+        mode = UI_NORMAL;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        break;
+    }
+    case UI_ADD_LINE: {
+        mode = UI_ADD_LINE;
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        break;
+    }
+    case UI_ADD_ROUND: {
+        mode = UI_ADD_ROUND;
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        break;
+    }
+    case UI_CLEAR: {
+        mode = UI_CLEAR;
+    }
+    }
+}
+
+void MyUI::handleButtons(bool isClosed) {
+    if (importButton.draw()) {
+        setMode(UI_IMPORT);
     }
 
     if (exportButton.draw()) {
-        newMode = Export;
-        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
-        fileDialog.show(FileDialog::FILE_DIALOG_SAVE);
+        setMode(UI_EXPORT);
     }
 
-    if (normalButton.draw()) {
-        newMode = Normal;
-        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+    if (normalButton.draw(getMode() == UI_NORMAL)) {
+        setMode(UI_NORMAL);
     }
 
-    if (addLineButton.draw()) {
-        newMode = AddLine;
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    if (addLineButton.draw(getMode() == UI_ADD_LINE)) {
+        if (isClosed) {
+            showHint("Комната замкнута");
+        } else {
+            setMode(UI_ADD_LINE);
+        }
     }
 
-    if (addRoundButton.draw()) {
-        newMode = AddRound;
-        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    if (addRoundButton.draw(getMode() == UI_ADD_ROUND)) {
+        if (isClosed) {
+            showHint("Комната замкнута");
+        } else {
+            setMode(UI_ADD_ROUND);
+        }
     }
 
-    mode = newMode;
+    if (clearButton.draw()) {
+        setMode(UI_CLEAR);
+    }
 }
 
 void MyUI::updateSize() {

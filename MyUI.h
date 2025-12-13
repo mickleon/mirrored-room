@@ -12,9 +12,17 @@ public:
     const char *text;
 
     bool draw();
+    bool draw(bool isActive);
 };
 
-enum UIMode { Normal, AddLine, AddRound, Import, Export };
+enum UIMode {
+    UI_NORMAL,
+    UI_ADD_LINE,
+    UI_ADD_ROUND,
+    UI_IMPORT,
+    UI_EXPORT,
+    UI_CLEAR
+};
 
 class MyUI {
 private:
@@ -29,6 +37,8 @@ private:
     float hintDuration = 3.0f;
     bool hintActive = false;
 
+    UIMode mode = UI_NORMAL;
+
     Vector2 screen = Vector2{1024, 700};
     Rectangle canvas =
         Rectangle{0, 40, screen.x - rightPanelWidth, screen.y - 40};
@@ -42,13 +52,16 @@ private:
     Button normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
     Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
     Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#23#"};
+    Button clearButton = {Rectangle{200, 5, 30, 30}, "#211#"};
 
 public:
     MyUI(const char *fontPath);
 
     FileDialog fileDialog;
 
-    UIMode mode = Normal;
+    UIMode getMode() { return mode; }
+
+    void setMode(UIMode newMode);
 
     void updateSize();
     void updateHint();
@@ -57,5 +70,5 @@ public:
 
     void showHint(const char *message);
     void drawPanel();
-    void handleButtons();
+    void handleButtons(bool isClosed);
 };
