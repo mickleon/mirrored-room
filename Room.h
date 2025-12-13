@@ -2,14 +2,12 @@
 
 #include <cmath>
 #include <filesystem>
-#include <string>
 #include <vector>
 
 #include "raylib.h"
 
 using std::vector;
 namespace fs = std::filesystem;
-
 class Wall;
 
 // Класс точек между зеркальнымы стенами

@@ -36,7 +36,7 @@ MyUI::MyUI(const char *fontPath) {
 
     updateSize();
 
-    SetWindowMinSize(500, 450);
+    SetWindowMinSize(520, 460);
     SetTargetFPS(60);
     SetExitKey(-1);
 

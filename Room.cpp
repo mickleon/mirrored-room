@@ -1,17 +1,15 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <stdexcept>
 
 #include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
 
 #include "Room.h"
 #include "Utils.h"
 
-using nlohmann::json, std::ofstream, std::cout;
+using nlohmann::json, std::ofstream;
 namespace fs = std::filesystem;
 
 const Color Wall::color = BROWN;

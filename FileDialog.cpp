@@ -23,10 +23,7 @@ FileDialog::FileDialog():
     dialogMode(FILE_DIALOG_OPEN),
     dirFilesIcon(MAX_DIRECTORY_FILES) {
     // Init window data
-    windowBounds = {
-        GetScreenWidth() / 2.0f - 250.0f, GetScreenHeight() / 2.0f - 200.0f,
-        500, 400
-    };
+    windowBounds = {10, 40, 500, 400};
     panOffset = {0, 0};
 
     memset(dirPathText, 0, MAX_PATH_LENGTH);
@@ -94,8 +91,8 @@ void FileDialog::update() {
 
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
                 if (CheckCollisionPointRec(
-                        mousePosition, {windowBounds.x, windowBounds.y,
-                                        windowBounds.width, windowBounds.height}
+                        mousePosition,
+                        {windowBounds.x, windowBounds.y, windowBounds.width, 20}
                     )) {
                     dragMode = true;
                     panOffset.x = mousePosition.x - windowBounds.x;
@@ -134,8 +131,8 @@ void FileDialog::update() {
 
         // Draw window and controls
         const char *windowTitle = (dialogMode == FILE_DIALOG_SAVE) ?
-                                      "#2# Save File Dialog" :
-                                      "#198# Open File Dialog";
+                                      "Сохранить файл" :
+                                      "Открыть файл";
 
         windowActive = !GuiWindowBox(windowBounds, windowTitle);
 
@@ -249,14 +246,15 @@ void FileDialog::update() {
 
         // Draw bottom controls
         GuiLabel(
-            {windowBounds.x + 8, windowBounds.y + windowBounds.height - 48, 70,
+            {windowBounds.x + 8, windowBounds.y + windowBounds.height - 48, 95,
              24},
-            "File name:"
+            "Имя файла"
         );
 
         if (GuiTextBox(
-                {windowBounds.x + 82, windowBounds.y + windowBounds.height - 48,
-                 windowBounds.width - 298, 24},
+                {windowBounds.x + 107,
+                 windowBounds.y + windowBounds.height - 48,
+                 windowBounds.width - 325, 24},
                 fileNameText, MAX_FILENAME_LENGTH, fileNameEditMode
             )) {
             if (strlen(fileNameText) > 0) {
@@ -281,7 +279,7 @@ void FileDialog::update() {
         }
 
         const char *selectButtonText =
-            (dialogMode == FILE_DIALOG_SAVE) ? "Save" : "Select";
+            (dialogMode == FILE_DIALOG_SAVE) ? "Сохранить" : "Открыть";
 
         SelectFilePressed = GuiButton(
             {windowBounds.x + windowBounds.width - 208,
@@ -359,7 +357,12 @@ void FileDialog::ReloadDirectoryFiles() {
     }
 }
 
+void FileDialog::show() {
+    show(dialogMode);
+}
+
 void FileDialog::show(Mode mode) {
     windowActive = true;
     dialogMode = mode;
+    windowBounds = {10, 50, 500, 400};
 }
