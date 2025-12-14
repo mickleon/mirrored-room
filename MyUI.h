@@ -15,15 +15,6 @@ public:
     bool draw(bool isActive);
 };
 
-enum UIMode {
-    UI_NORMAL,
-    UI_ADD_LINE,
-    UI_ADD_ROUND,
-    UI_IMPORT,
-    UI_EXPORT,
-    UI_CLEAR
-};
-
 class MyUI {
 private:
     Font font;
@@ -36,8 +27,6 @@ private:
     float hintTimer = 0;
     float hintDuration = 3.0f;
     bool hintActive = false;
-
-    UIMode mode = UI_NORMAL;
 
     Vector2 screen = Vector2{1024, 700};
     Rectangle canvas =
@@ -52,9 +41,18 @@ private:
     Button normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
     Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
     Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#23#"};
-    Button clearButton = {Rectangle{200, 5, 30, 30}, "#211#"};
+    Button clearButton = {Rectangle{195, 5, 30, 30}, "#211#"};
 
 public:
+    enum UIMode {
+        UI_NORMAL,
+        UI_ADD_LINE,
+        UI_ADD_ROUND,
+        UI_IMPORT,
+        UI_EXPORT,
+        UI_CLEAR
+    };
+
     MyUI(const char *fontPath);
 
     FileDialog fileDialog;
@@ -71,4 +69,7 @@ public:
     void showHint(const char *message);
     void drawPanel();
     void handleButtons(bool isClosed);
+
+private:
+    MyUI::UIMode mode = UI_NORMAL;
 };

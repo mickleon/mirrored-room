@@ -76,9 +76,9 @@ void WallRound::updateParams() {
 
     float h = std::sqrt(radius * radius - d * d / 4);
     if (orient) {
-        center = Vector2{m.x + h * dy / d, m.y - h * dx / d};
-    } else {
         center = Vector2{m.x - h * dy / d, m.y + h * dx / d};
+    } else {
+        center = Vector2{m.x + h * dy / d, m.y - h * dx / d};
     }
 
     updateAngles();
@@ -93,14 +93,14 @@ void WallRound::updateAngles() {
         startAngle += 360.0f;
     }
 
-    if ((isBig && !orient) || (!isBig && orient)) {
+    if (isBig == orient) {
         startAngle -= 360;
     }
 }
 
 WallRound::WallRound(Point *start, Point *end): Wall(start, end) {
     isBig = false;
-    orient = true;
+    orient = false;
     updateParams();
 }
 

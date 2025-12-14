@@ -72,7 +72,8 @@ class WallRound: public Wall {
     float radius;   // Радиус дуги
     Vector2 center; // Центр дуги
     bool isBig;     // БОльшая или меньшая дуга
-    bool orient;    // Вогнутое/выпуклое
+    bool orient; // 0 - выпуклое, 1 - вогнутое при рисовании выпуклой фиугры по
+                 // часовой стрелке
 
     void updateParams();
     void updateAngles(); // Обновление углов

@@ -20,11 +20,11 @@ int main() {
         if (ui.fileDialog.isFileSelected()) {
             try {
                 switch (ui.getMode()) {
-                case UI_IMPORT: {
+                case MyUI::UI_IMPORT: {
                     room.load(ui.fileDialog.filePath());
                     break;
                 }
-                case UI_EXPORT: {
+                case MyUI::UI_EXPORT: {
                     room.save(ui.fileDialog.filePath());
                     break;
                 }
@@ -35,9 +35,9 @@ int main() {
             }
         }
 
-        if (ui.getMode() == UI_CLEAR) {
+        if (ui.getMode() == MyUI::UI_CLEAR) {
             room.clear();
-            ui.setMode(UI_NORMAL);
+            ui.setMode(MyUI::UI_NORMAL);
         }
 
         BeginDrawing();
@@ -60,10 +60,10 @@ int main() {
         );
 
         // Рисование линий
-        if (ui.getMode() == UI_ADD_LINE) {
+        if (ui.getMode() == MyUI::UI_ADD_LINE) {
             if (room.isClosed()) {
                 ui.showHint("Комната замкнута");
-                ui.setMode(UI_NORMAL);
+                ui.setMode(MyUI::UI_NORMAL);
             } else if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                        CheckCollisionPointRec(
                            GetMousePosition(), ui.getCanvas()
@@ -77,10 +77,10 @@ int main() {
         }
 
         // Рисование дуг
-        if (ui.getMode() == UI_ADD_ROUND) {
+        if (ui.getMode() == MyUI::UI_ADD_ROUND) {
             if (room.isClosed()) {
                 ui.showHint("Комната замкнута");
-                ui.setMode(UI_NORMAL);
+                ui.setMode(MyUI::UI_NORMAL);
             } else if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                        CheckCollisionPointRec(
                            GetMousePosition(), ui.getCanvas()
@@ -101,7 +101,7 @@ int main() {
 
         GuiUnlock();
         if (ui.fileDialog.update()) {
-            ui.setMode(UI_NORMAL);
+            ui.setMode(MyUI::UI_NORMAL);
         }
 
         EndDrawing();
