@@ -1,0 +1,12 @@
+[
+    {
+        "label": "G++ build & run",
+        "command": "g++ \"$ZED_FILE\" -std=c++17 -g -Wall -o \"$ZED_STEM\" && \"./$ZED_STEM\"",
+        "cwd": "$ZED_WORKTREE_ROOT"
+    },
+    {
+        "label": "CMake build & run",
+        "command": "cmake -B build -DCMAKE_BUILD_TYPE=Debug && cmake --build build && ./build/main",
+        "cwd": "$ZED_WORKTREE_ROOT"
+    }
+]

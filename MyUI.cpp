@@ -1,6 +1,3 @@
-#include <cstdio>
-#include <cstring>
-
 #include "raygui.h"
 #include "raylib.h"
 

@@ -1,0 +1,35 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+    {
+        "request": "launch",
+        "label": "C++ debug",
+        "build": {
+            "command": "g++",
+            "args": [
+                "\"$ZED_FILE\"",
+                "-std=c++17",
+                "-g",
+                "-Wall",
+                "-o",
+                "./\"$ZED_STEM\""
+            ],
+            "cwd": "$ZED_WORKTREE_ROOT"
+        },
+        "program": "\"$ZED_WORKTREE_ROOT/$ZED_STEM\"",
+        "adapter": "CodeLLDB"
+    },
+    {
+        "request": "launch",
+        "label": "CMake debug",
+        "program": "$ZED_WORKTREE_ROOT/build/MirroredRoom",
+        "cwd": "$ZED_WORKTREE_ROOT",
+        "build": {
+            "command": "./maker.sh debug",
+            "cwd": "$ZED_WORKTREE_ROOT"
+        },
+        "adapter": "CodeLLDB"
+    }
+]

@@ -1,5 +1,6 @@
-#include "raylib.h"
 #include <cmath>
+
+#include "raylib.h"
 
 float distance(Vector2 a, Vector2 b) {
     float dy = a.x - b.x;

@@ -112,8 +112,7 @@ fs::path FileDialog::filePath() {
     return fullPath;
 }
 
-bool FileDialog::update() {
-    bool status = false;
+void FileDialog::update() {
     if (windowActive) {
         // update window dragging
         if (supportDrag) {
@@ -165,7 +164,6 @@ bool FileDialog::update() {
                                       "Открыть файл";
 
         windowActive = !GuiWindowBox(windowBounds, windowTitle);
-        status = !windowActive;
 
         // Draw previous directory button + logic
         if (GuiButton(
@@ -328,13 +326,11 @@ bool FileDialog::update() {
                 "Отмена"
             )) {
             windowActive = false;
-            status = true;
         }
 
         // Exit on file selected
         if (SelectFilePressed) {
             windowActive = false;
-            status = true;
         }
 
         // File dialog has been closed
@@ -345,7 +341,6 @@ bool FileDialog::update() {
             dirFiles.paths = nullptr;
         }
     }
-    return status;
 }
 
 void FileDialog::ReloadDirectoryFiles() {

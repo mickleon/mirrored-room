@@ -22,7 +22,7 @@ public:
     FileDialog();
     ~FileDialog();
 
-    bool update();
+    void update();
 
     bool isActive() const { return windowActive; }
 

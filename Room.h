@@ -2,13 +2,13 @@
 
 #include <cmath>
 #include <exception>
-#include <filesystem>
 #include <vector>
 
+#include "nlohmann/json.hpp"
 #include "raylib.h"
 
-using std::vector;
-namespace fs = std::filesystem;
+using std::vector, nlohmann::json;
+
 class Wall;
 
 // Класс точек между зеркальнымы стенами
@@ -19,6 +19,7 @@ private:
 
 public:
     Point(const Vector2 &coord);
+    Point(const json &j); // Конструктор из json
 
     void setCoord(const Vector2 &coord);
 
@@ -29,6 +30,8 @@ public:
     void updateWalls(); // Обновление параметров свзанных стен
 
     void addWall(Wall *wall);
+
+    json to_json(); // Экспорт в json
 
     void draw();
 };
@@ -45,9 +48,11 @@ public:
 
     Wall(Point *start, Point *end);
 
-    virtual void updateParams() {} // Обновление парамтеров стены
+    virtual void updateParams() {} // Обновление параметров стены
 
     virtual void draw() {}
+
+    virtual json to_json() { return json{}; } // Экспорт в json
 
     Point *getStart() { return start; }
 
@@ -59,7 +64,11 @@ class WallLine: public Wall {
 public:
     WallLine(Point *start, Point *end): Wall(start, end) {}
 
-    virtual void updateParams() {}
+    WallLine(const json &j); // Конструктор из json
+
+    void updateParams() {}
+
+    json to_json();
 
     void draw();
 };
@@ -69,9 +78,12 @@ class WallRound: public Wall {
     float startAngle; // Угол начала относительно горизонтальной прямой
     float endAngle;   // Угол конца относительно горизонтальной прямой
 
-    float radius;   // Радиус дуги
-    Vector2 center; // Центр дуги
-    bool isBig;     // БОльшая или меньшая дуга
+    float radiusCoef; // Коэфициент, на который нужно умножить хорду, чтобы
+                      // получить радиус
+    float chord;      // Длина хорды между двумя точками
+    float radius;     // Радиус дуги
+    Vector2 center;   // Центр дуги
+    bool isBig;       // БОльшая или меньшая дуга
     bool orient; // 0 - выпуклое, 1 - вогнутое при рисовании выпуклой фиугры по
                  // часовой стрелке
 
@@ -79,9 +91,11 @@ class WallRound: public Wall {
     void updateAngles(); // Обновление углов
 
 public:
-    WallRound(Point *start, Point *end);
+    WallRound(Point *start, Point *end, float radiusCoef);
 
     void toggleOrient();
+
+    json to_json();
 
     void draw();
 };
@@ -94,6 +108,7 @@ private:
 
 public:
     Room();
+    Room(const json &j); // Конструктор из json
 
     const int static minimalDistance; // Минимальное расстояние, на котором
                                       // рядом могут находиться точки
@@ -101,30 +116,41 @@ public:
     const int static maximumPoints; // Максимальное число точек в комнате
     const int static minimumPoints; // Максимальное число точек в комнате
 
-    class PointsAreTooClose:
-        public std::exception { // Исключение, выбрасывается, когда 2 точки
-                                // слишком близки
+    class RoomException: public std::exception {
     public:
-        const char *what() const noexcept override;
+        virtual const char *what() const noexcept override;
+    };
+
+    class PointsAreTooClose:
+        public Room::RoomException { // Исключение, выбрасывается, когда 2 точки
+                                     // слишком близки
+
+    public:
+        const char *what() const noexcept;
     };
 
     class TooManyPoints:
-        public std::exception { // Исключение, выбрасывается, когда точек больше
-                                // установленного количества
+        public Room::RoomException { // Исключение, выбрасывается, когда точек
+                                     // больше установленного количества
+
     public:
-        const char *what() const noexcept override;
+        const char *what() const noexcept;
     };
 
-    class TooFewPoints: public std::exception { // Исключение, выбрасывается,
-                                                // когда точек слишком мало
+    class TooFewPoints:
+        public Room::RoomException { // Исключение, выбрасывается,
+                                     // когда точек слишком мало
+
     public:
-        const char *what() const noexcept override;
+        const char *what() const noexcept;
     };
 
-    class WallsCollision: public std::exception { // Исключение, выбрасывается,
-                                                  // если стены пересекаются
+    class WallsCollision:
+        public Room::RoomException { // Исключение, выбрасывается,
+                                     // если стены пересекаются
+
     public:
-        const char *what() const noexcept override;
+        const char *what() const noexcept;
     };
 
     bool isClosed(); // Замкнутая ли комната
@@ -133,7 +159,7 @@ public:
         const Vector2 &coord
     );
     void addWallRound( // Добавить в конец ломаной cферическую стену
-        const Vector2 &coord
+        const Vector2 &coord, float radiusCoef = 1
     );
 
     void movePoint(
@@ -142,9 +168,9 @@ public:
 
     void draw();
 
-    void load(fs::path filePath); // Импорт из json
-    void save(fs::path filePath); // Экспорт в json
-    void clear();                 // Очистка комнаты
+    json to_json(); // Экспорт в json
+
+    void clear(); // Очистка комнаты
 
     ~Room();
 };
