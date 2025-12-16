@@ -232,6 +232,19 @@ Vector2 WallRound::closestPoint(const Vector2 &point) {
     }
 }
 
+RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
+    if (wall) {
+        RayStart::wall = wall;
+    }
+
+    RayStart::point = Vector2(point);
+    RayStart::angle = angle;
+}
+
+void RayStart::draw() {
+    DrawCircleV(point, 10, ORANGE);
+}
+
 Wall *Room::closestWall(const Vector2 &point) {
     Wall *closeWall = nullptr;
     float minDist = MAXFLOAT;
@@ -436,6 +449,10 @@ void Room::draw() {
     for (Point &point : points) {
         point.draw();
     }
+
+    if (rayStart) {
+        rayStart->draw();
+    }
 }
 
 json Room::to_json() {
@@ -452,6 +469,14 @@ json Room::to_json() {
         j["walls"].push_back(wall->to_json());
     }
     return j;
+}
+
+void Room::addRay(const Vector2 &point) {
+    Wall *closestWall = Room::closestWall(point);
+    if (closestWall) {
+        Vector2 closestPoint = closestWall->closestPoint(point);
+        rayStart = new RayStart(closestPoint, closestWall);
+    }
 }
 
 void Room::clear() {

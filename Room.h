@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <exception>
 #include <vector>
 
@@ -58,9 +59,11 @@ public:
 
     Point *getEnd() { return end; }
 
-    virtual Vector2 closestPoint(const Vector2 &point) = 0;
+    virtual Vector2 closestPoint // Возвращает ближайшую точку к `point`
+        (const Vector2 &point) = 0;
 
-    virtual float distanceToWall(const Vector2 &point);
+    virtual float distanceToWall // Возвращает расстояние до `point`
+        (const Vector2 &point);
 };
 
 // Прямая стена
@@ -112,6 +115,18 @@ public:
     void draw();
 };
 
+// Класс вершины луча
+class RayStart {
+    Vector2 point;
+    float angle;
+    Wall *wall;
+
+public:
+    RayStart(const Vector2 &point, Wall *wall, float angle);
+
+    void draw();
+};
+
 // Комната, представляющая собой многоугольник
 class Room {
 private:
@@ -119,6 +134,8 @@ private:
     vector<Wall *> walls; // Стены
 
 public:
+    RayStart *rayStart = nullptr;
+
     Room();
     Room(const json &j); // Конструктор из json
 
@@ -183,6 +200,8 @@ public:
     void draw();
 
     json to_json(); // Экспорт в json
+
+    void addRay(const Vector2 &point);
 
     void clear(); // Очистка комнаты
 

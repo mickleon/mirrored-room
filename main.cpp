@@ -213,6 +213,13 @@ int main() {
             }
         }
 
+        if (ui.getMode() == MyUI::UI_ADD_RAY) {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
+                CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
+                room->addRay(GetMousePosition());
+            }
+        }
+
         room->draw();
         EndScissorMode();
 
