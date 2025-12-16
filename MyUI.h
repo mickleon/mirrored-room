@@ -45,8 +45,8 @@ private:
     Button normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
     Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
     Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#22#"};
-    Button addRayButton = {Rectangle{195, 5, 30, 30}, "#145#"};
-    Button clearButton = {Rectangle{230, 5, 30, 30}, "#24#"};
+    Button addRayButton = {Rectangle{210, 5, 30, 30}, "#145#"};
+    Button clearButton = {Rectangle{260, 5, 30, 30}, "#24#"};
 
 public:
     enum UIMode {
@@ -72,6 +72,9 @@ public:
     void updateHint();
 
     Rectangle getCanvas() { return canvas; }
+
+    void saveFile(Room *room);
+    Room *openFIle(Room *room);
 
     void showHint(const char *message);
     void showPanel(bool active, WallRound *wallRound);

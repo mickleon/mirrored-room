@@ -1,11 +1,13 @@
-#include "Room.h"
+#include <fstream>
+#include <stdexcept>
+
 #include "raygui.h"
 #include "raylib.h"
 
 #include "MyUI.h"
 #include "Room.h"
 
-using std::string;
+using std::string, std::runtime_error;
 
 bool Button::draw() {
     return GuiButton(rect, text);
@@ -35,7 +37,7 @@ Font MyUI::initFont(const char *fontPath, int fontSize) {
 }
 
 MyUI::MyUI(const char *fontPath, const char *iconsPath) {
-    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI);
     InitWindow(1024, 700, "Зеркaльная комната");
 
     font = initFont(fontPath, fontSize);
@@ -43,7 +45,7 @@ MyUI::MyUI(const char *fontPath, const char *iconsPath) {
 
     updateSize();
 
-    SetWindowMinSize(570, 460);
+    SetWindowMinSize(600, 460);
     SetTargetFPS(60);
     SetExitKey(-1);
 
@@ -52,6 +54,116 @@ MyUI::MyUI(const char *fontPath, const char *iconsPath) {
     GuiLoadIcons(iconsPath, false);
 
     GuiSetStyle(DEFAULT, TEXT_LINE_SPACING, 20);
+}
+
+Room *MyUI::openFIle(Room *room) {
+    fs::path filePath = fileDialog.filePath();
+    if (!fs::exists(filePath)) {
+        throw std::runtime_error(
+            "Файл не найден: " + filePath.filename().string()
+        );
+    }
+
+    if (!fs::is_regular_file(filePath)) {
+        throw runtime_error(
+            "Указанный путь не является файлом: " + filePath.filename().string()
+        );
+    }
+
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        throw runtime_error(
+            "Не удалось открыть файл для чтения: " +
+            filePath.filename().string()
+        );
+    }
+
+    json j;
+
+    try {
+        file >> j;
+    } catch (json::exception &e) {
+        throw runtime_error(
+            "Ошибка формата файла: " + filePath.filename().string()
+        );
+    }
+
+    if (file.bad()) {
+        throw runtime_error(
+            "Ошибка чтения файла: " + filePath.filename().string()
+        );
+    }
+
+    if (!file.eof() && file.fail()) {
+        throw runtime_error(
+            "Ошибка формата файла: " + filePath.filename().string()
+        );
+    }
+
+    file.close();
+
+    Room *newRoom;
+
+    try {
+        newRoom = new Room(j);
+    } catch (const Room::RoomException &e) {
+        throw runtime_error(
+            "Некорректные данные в файле: " + filePath.filename().string()
+        );
+    } catch (...) {
+        throw runtime_error(
+            "Ошибка формата файла: " + filePath.filename().string()
+        );
+    }
+
+    delete room;
+
+    room = newRoom;
+
+    showHint(TextFormat(
+        "Комната успешно загружена из файла %s",
+        fileDialog.filePath().filename().c_str()
+    ));
+    return room;
+}
+
+void MyUI::saveFile(Room *room) {
+    fs::path filePath = fileDialog.filePath();
+
+    if (filePath.extension().empty()) {
+        filePath.replace_extension(".json");
+    }
+
+    if (!fs::exists(filePath.parent_path())) {
+        throw runtime_error(
+            "Некоррректное имя файла: " + filePath.filename().string()
+        );
+    }
+
+    std::ofstream file(filePath);
+
+    if (!file.is_open()) {
+        throw runtime_error(
+            "Не удалось открыть файл для записи: " +
+            filePath.filename().string()
+        );
+    }
+
+    file << room->to_json().dump(2) << '\n';
+
+    if (file.fail()) {
+        throw runtime_error(
+            "Нет прав на запись в файл: " + filePath.filename().string()
+        );
+    }
+
+    file.close();
+
+    showHint(TextFormat(
+        "Файл %s успешно экспортирован",
+        fileDialog.filePath().filename().c_str()
+    ));
 }
 
 void MyUI::showHint(const char *message) {

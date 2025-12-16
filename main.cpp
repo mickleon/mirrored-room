@@ -1,7 +1,3 @@
-#include <exception>
-#include <filesystem>
-#include <fstream>
-
 #include "raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
@@ -9,9 +5,6 @@
 
 #include "MyUI.h"
 #include "Room.h"
-
-using std::runtime_error;
-namespace fs = std::filesystem;
 
 int main() {
     MyUI ui =
@@ -27,121 +20,12 @@ int main() {
                 switch (ui.getMode()) {
                 // Создание файла
                 case MyUI::UI_EXPORT: {
-                    fs::path filePath = ui.fileDialog.filePath();
-
-                    if (filePath.extension().empty()) {
-                        filePath.replace_extension(".json");
-                    }
-
-                    if (!fs::exists(filePath.parent_path())) {
-                        throw runtime_error(
-                            "Некоррректное имя файла: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    std::ofstream file(filePath);
-
-                    if (!file.is_open()) {
-                        throw runtime_error(
-                            "Не удалось открыть файл для записи: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    file << room->to_json().dump(2) << '\n';
-
-                    if (file.fail()) {
-                        throw runtime_error(
-                            "Нет прав на запись в файл: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    file.close();
-
-                    ui.showHint(TextFormat(
-                        "Файл %s успешно экспортирован",
-                        ui.fileDialog.filePath().filename().c_str()
-                    ));
+                    ui.saveFile(room);
                     break;
                 }
                 // Открытие файла
                 case MyUI::UI_IMPORT: {
-                    fs::path filePath = ui.fileDialog.filePath();
-                    if (!fs::exists(filePath)) {
-                        throw std::runtime_error(
-                            "Файл не найден: " + filePath.filename().string()
-                        );
-                    }
-
-                    if (!fs::is_regular_file(filePath)) {
-                        throw runtime_error(
-                            "Указанный путь не является файлом: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    std::ifstream file(filePath);
-
-                    if (!file.is_open()) {
-                        throw runtime_error(
-                            "Не удалось открыть файл для чтения: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    json j;
-
-                    try {
-                        file >> j;
-                    } catch (json::exception &e) {
-                        throw runtime_error(
-                            "Ошибка формата файла: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    if (file.bad()) {
-                        throw runtime_error(
-                            "Ошибка чтения файла: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    if (!file.eof() && file.fail()) {
-                        throw runtime_error(
-                            "Ошибка формата файла: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    file.close();
-
-                    Room *newRoom;
-
-                    try {
-                        newRoom = new Room(j);
-                    } catch (const Room::RoomException &e) {
-                        throw runtime_error(
-                            "Некорректные данные в файле: " +
-                            filePath.filename().string()
-                        );
-                    } catch (...) {
-                        throw runtime_error(
-                            "Ошибка формата файла: " +
-                            filePath.filename().string()
-                        );
-                    }
-
-                    delete room;
-
-                    room = newRoom;
-
-                    ui.showHint(TextFormat(
-                        "Комната успешно загружена из файла %s",
-                        ui.fileDialog.filePath().filename().c_str()
-                    ));
+                    room = ui.openFIle(room);
                     break;
                 }
                 default: break;
@@ -213,6 +97,7 @@ int main() {
             }
         }
 
+        // Добавление луча
         if (ui.getMode() == MyUI::UI_ADD_RAY) {
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                 CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
