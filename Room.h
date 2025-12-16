@@ -57,6 +57,10 @@ public:
     Point *getStart() { return start; }
 
     Point *getEnd() { return end; }
+
+    virtual Vector2 closestPoint(const Vector2 &point) = 0;
+
+    virtual float distanceToWall(const Vector2 &point);
 };
 
 // Прямая стена
@@ -67,6 +71,8 @@ public:
     WallLine(const json &j); // Конструктор из json
 
     void updateParams() {}
+
+    Vector2 closestPoint(const Vector2 &point);
 
     json to_json();
 
@@ -95,6 +101,12 @@ public:
 
     void toggleOrient();
 
+    float getRadiusCoef() { return radiusCoef; }
+
+    void setRadiusCoef(float radiusCoef);
+
+    Vector2 closestPoint(const Vector2 &point);
+
     json to_json();
 
     void draw();
@@ -109,6 +121,8 @@ private:
 public:
     Room();
     Room(const json &j); // Конструктор из json
+
+    Wall *closestWall(const Vector2 &point);
 
     const int static minimalDistance; // Минимальное расстояние, на котором
                                       // рядом могут находиться точки

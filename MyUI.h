@@ -5,6 +5,7 @@
 #include "raylib.h"
 
 #include "FileDialog.h"
+#include "Room.h"
 
 class Button {
 public:
@@ -31,29 +32,35 @@ private:
     Vector2 screen = Vector2{1024, 700};
     Rectangle canvas =
         Rectangle{0, 40, screen.x - rightPanelWidth, screen.y - 40};
+
     Rectangle panel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y};
+    bool panelActive = false;
+    WallRound *wallRound = nullptr;
 
     Vector2 hintPosition;
     Rectangle hintBar;
 
-    Button importButton = {Rectangle{5, 5, 30, 30}, "#01#"};
+    Button importButton = {Rectangle{5, 5, 30, 30}, "#05#"};
     Button exportButton = {Rectangle{40, 5, 30, 30}, "#02#"};
     Button normalButton = {Rectangle{90, 5, 30, 30}, "#21#"};
     Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
-    Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#23#"};
-    Button clearButton = {Rectangle{195, 5, 30, 30}, "#211#"};
+    Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#22#"};
+    Button addRayButton = {Rectangle{195, 5, 30, 30}, "#145#"};
+    Button clearButton = {Rectangle{230, 5, 30, 30}, "#24#"};
 
 public:
     enum UIMode {
         UI_NORMAL,
         UI_ADD_LINE,
         UI_ADD_ROUND,
+        UI_EDIT_ROUND,
+        UI_ADD_RAY,
         UI_IMPORT,
         UI_EXPORT,
         UI_CLEAR
     };
 
-    MyUI(const char *fontPath);
+    MyUI(const char *fontPath, const char *iconsPath);
 
     FileDialog fileDialog;
 
@@ -67,6 +74,7 @@ public:
     Rectangle getCanvas() { return canvas; }
 
     void showHint(const char *message);
+    void showPanel(bool active, WallRound *wallRound);
     void drawPanel();
     void handleButtons(bool isClosed);
 

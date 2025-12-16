@@ -14,16 +14,18 @@ using std::runtime_error;
 namespace fs = std::filesystem;
 
 int main() {
-    MyUI ui = MyUI("assets/fonts/AdwaitaSans-Regular.ttf");
+    MyUI ui =
+        MyUI("assets/fonts/AdwaitaSans-Regular.ttf", "assets/iconset.rgi");
     Room *room = new Room();
 
     while (!WindowShouldClose()) {
         ui.updateSize();
 
-        // Открытие/закрытие файла
+        // Открытие/создание файла
         if (ui.fileDialog.isFileSelected()) {
             try {
                 switch (ui.getMode()) {
+                // Создание файла
                 case MyUI::UI_EXPORT: {
                     fs::path filePath = ui.fileDialog.filePath();
 
@@ -64,6 +66,7 @@ int main() {
                     ));
                     break;
                 }
+                // Открытие файла
                 case MyUI::UI_IMPORT: {
                     fs::path filePath = ui.fileDialog.filePath();
                     if (!fs::exists(filePath)) {
@@ -149,6 +152,7 @@ int main() {
             ui.setMode(MyUI::UI_NORMAL);
         }
 
+        // Очистка экрана
         if (ui.getMode() == MyUI::UI_CLEAR) {
             room->clear();
             ui.setMode(MyUI::UI_NORMAL);
@@ -156,8 +160,10 @@ int main() {
 
         BeginDrawing();
 
+        // Фон
         ClearBackground(LIGHTGRAY);
         DrawRectangleRec(ui.getCanvas(), RAYWHITE);
+
         ui.updateHint();
 
         // Диалог выбора файла
@@ -200,7 +206,7 @@ int main() {
                            GetMousePosition(), ui.getCanvas()
                        )) {
                 try {
-                    room->addWallRound(GetMousePosition());
+                    room->addWallRound(GetMousePosition(), 50);
                 } catch (std::exception &e) {
                     ui.showHint(e.what());
                 }
@@ -211,6 +217,28 @@ int main() {
         EndScissorMode();
 
         // Правая панель
+        if (ui.getMode() == MyUI::UI_NORMAL ||
+            ui.getMode() == MyUI::UI_EDIT_ROUND) {
+            if (CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
+                WallRound *closest = dynamic_cast<WallRound *>(
+                    room->closestWall(GetMousePosition())
+                );
+                if (closest) {
+                    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+                } else {
+                    SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+                }
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                    if (closest) {
+                        ui.setMode(MyUI::UI_EDIT_ROUND);
+                        ui.showPanel(true, closest);
+                    } else {
+                        ui.setMode(MyUI::UI_NORMAL);
+                        ui.showPanel(false, nullptr);
+                    }
+                }
+            }
+        }
         ui.drawPanel();
 
         GuiUnlock();

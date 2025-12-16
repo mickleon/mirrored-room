@@ -1,8 +1,10 @@
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
+#include "raymath.h"
+#include <cmath>
+#include <cstdio>
 
 #include "Room.h"
-#include "Utils.h"
 
 using nlohmann::json;
 
@@ -82,7 +84,7 @@ void WallRound::updateParams() {
     float dy = start->getY() - end->getY();
     chord = std::sqrt(dx * dx + dy * dy);
 
-    radius = chord * radiusCoef;
+    radius = chord * (77.0 / 2 / (radiusCoef + 10) + 3.0 / 20);
 
     float h = std::sqrt(radius * radius - chord * chord / 4);
     if (orient) {
@@ -106,9 +108,13 @@ void WallRound::updateAngles() {
     if (isBig == orient) {
         startAngle -= 360;
     }
+
+    if (startAngle > endAngle) {
+        std::swap(startAngle, endAngle);
+    }
 }
 
-WallRound::WallRound(Point *start, Point *end, float radiusCoef = 1):
+WallRound::WallRound(Point *start, Point *end, float radiusCoef = 50):
     Wall(start, end) {
     isBig = false;
     orient = false;
@@ -118,6 +124,11 @@ WallRound::WallRound(Point *start, Point *end, float radiusCoef = 1):
 
 void WallRound::toggleOrient() {
     orient = !orient;
+    updateParams();
+}
+
+void WallRound::setRadiusCoef(float radiusCoef) {
+    WallRound::radiusCoef = radiusCoef;
     updateParams();
 }
 
@@ -132,6 +143,109 @@ void WallRound::draw() {
         center, radius - thick / 2, radius + thick / 2, startAngle, endAngle,
         36.0f, color
     );
+}
+
+float Wall::distanceToWall(const Vector2 &point) {
+    return Vector2Distance(closestPoint(point), point);
+}
+
+Vector2 WallLine::closestPoint(const Vector2 &point) {
+    Vector2 start = getStart()->getCoord();
+    Vector2 end = getEnd()->getCoord();
+    Vector2 toPoint = Vector2Subtract(point, start);
+
+    Vector2 wallVec = Vector2Subtract(end, start);
+    float wallLengthSq = Vector2LengthSqr(wallVec);
+
+    if (wallLengthSq == 0.0f) {
+        return start;
+    }
+
+    float t = Vector2DotProduct(toPoint, wallVec) / wallLengthSq;
+    t = fmaxf(0.0f, fminf(1.0f, t));
+    Vector2 closestPoint = {start.x + t * wallVec.x, start.y + t * wallVec.y};
+
+    return closestPoint;
+}
+
+Vector2 WallRound::closestPoint(const Vector2 &point) {
+    float distanceToCenter = Vector2Distance(point, center);
+    Vector2 diff = Vector2Subtract(point, center);
+    float pointAngle =
+        atan2f(diff.y, diff.x) * RAD2DEG; // Конвертируем в градусы
+    if (pointAngle < 0) {
+        pointAngle += 360.0f;
+    }
+
+    float normalizedStart = fmodf(startAngle, 360.0f);
+    float normalizedEnd = fmodf(endAngle, 360.0f);
+    if (normalizedStart < 0) {
+        normalizedStart += 360.0f;
+    }
+    if (normalizedEnd < 0) {
+        normalizedEnd += 360.0f;
+    }
+
+    bool isWithinArc = false;
+    if (normalizedEnd >= normalizedStart) {
+        isWithinArc =
+            (pointAngle >= normalizedStart && pointAngle <= normalizedEnd);
+    } else {
+        isWithinArc =
+            (pointAngle >= normalizedStart || pointAngle <= normalizedEnd);
+    }
+
+    if (isWithinArc) {
+        // Ближайшая точка находится на окружности в том же направлении
+        // Нормализуем вектор diff до длины радиуса
+        if (distanceToCenter > 0) {
+            float scale = radius / distanceToCenter;
+            return Vector2{
+                center.x + diff.x * scale, center.y + diff.y * scale
+            };
+        } else {
+            // Если точка совпадает с центром, возвращаем любую точку на
+            // окружности (например, по начальному углу)
+            float angleRad = normalizedStart * DEG2RAD;
+            return Vector2{
+                center.x + radius * cosf(angleRad),
+                center.y + radius * sinf(angleRad)
+            };
+        }
+    } else {
+        float startRad = startAngle * DEG2RAD;
+        float endRad = endAngle * DEG2RAD;
+
+        Vector2 startPoint = {
+            center.x + radius * cosf(startRad),
+            center.y + radius * sinf(startRad)
+        };
+
+        Vector2 endPoint = {
+            center.x + radius * cosf(endRad), center.y + radius * sinf(endRad)
+        };
+
+        float distToStart = Vector2Distance(point, startPoint);
+        float distToEnd = Vector2Distance(point, endPoint);
+
+        return (distToStart < distToEnd) ? startPoint : endPoint;
+    }
+}
+
+Wall *Room::closestWall(const Vector2 &point) {
+    Wall *closeWall = nullptr;
+    float minDist = MAXFLOAT;
+
+    for (Wall *wall : walls) {
+        float dist = wall->distanceToWall(point);
+
+        if (dist < minDist && dist < 15) {
+            minDist = dist;
+            closeWall = wall;
+        }
+    }
+
+    return closeWall;
 }
 
 Room::Room() {
@@ -218,7 +332,7 @@ void Room::addWallLine(const Vector2 &coord) {
     size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
-        float d = distance(points[i].getCoord(), coord);
+        float d = Vector2Distance(points[i].getCoord(), coord);
         if (d < minimalDistance) {
             if (i == 0 && pointsAmount > 2) {
                 if (pointsAmount < minimumPoints) {
@@ -238,19 +352,19 @@ void Room::addWallLine(const Vector2 &coord) {
         throw Room::TooManyPoints();
     }
 
-    if (walls.size()) {
-        Vector2 collision = {-1, -1};
-        for (Wall *wall : walls) {
-            if (CheckCollisionLines(
-                    wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
-                    points[pointsAmount - 1].getCoord(), coord, &collision
-                ) &&
-                collision.x != points[pointsAmount - 1].getX() &&
-                collision.y != points[pointsAmount - 1].getY()) {
-                throw Room::WallsCollision();
-            }
-        }
-    }
+    // if (walls.size()) {
+    //     Vector2 collision = {-1, -1};
+    //     for (Wall *wall : walls) {
+    //         if (CheckCollisionLines(
+    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
+    //                 points[pointsAmount - 1].getCoord(), coord, &collision
+    //             ) &&
+    //             collision.x != points[pointsAmount - 1].getX() &&
+    //             collision.y != points[pointsAmount - 1].getY()) {
+    //             throw Room::WallsCollision();
+    //         }
+    //     }
+    // }
 
     points.push_back(coord);
     ++pointsAmount;
@@ -265,7 +379,7 @@ void Room::addWallRound(const Vector2 &coord, float radiusCoef) {
     size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
-        float d = distance(points[i].getCoord(), coord);
+        float d = Vector2Distance(points[i].getCoord(), coord);
         if (d < minimalDistance) {
             if (i == 0 && pointsAmount > 2) {
                 if (pointsAmount < minimumPoints) {
@@ -286,19 +400,19 @@ void Room::addWallRound(const Vector2 &coord, float radiusCoef) {
         throw Room::TooManyPoints();
     }
 
-    if (walls.size()) {
-        Vector2 collision = {-1, -1};
-        for (Wall *wall : walls) {
-            if (CheckCollisionLines(
-                    wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
-                    points[pointsAmount - 1].getCoord(), coord, &collision
-                ) &&
-                collision.x != points[pointsAmount - 1].getX() &&
-                collision.y != points[pointsAmount - 1].getY()) {
-                throw Room::WallsCollision();
-            }
-        }
-    }
+    // if (walls.size()) {
+    //     Vector2 collision = {-1, -1};
+    //     for (Wall *wall : walls) {
+    //         if (CheckCollisionLines(
+    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
+    //                 points[pointsAmount - 1].getCoord(), coord, &collision
+    //             ) &&
+    //             collision.x != points[pointsAmount - 1].getX() &&
+    //             collision.y != points[pointsAmount - 1].getY()) {
+    //             throw Room::WallsCollision();
+    //         }
+    //     }
+    // }
 
     points.push_back(coord);
     ++pointsAmount;

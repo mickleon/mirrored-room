@@ -1,7 +1,9 @@
+#include "Room.h"
 #include "raygui.h"
 #include "raylib.h"
 
 #include "MyUI.h"
+#include "Room.h"
 
 using std::string;
 
@@ -32,8 +34,8 @@ Font MyUI::initFont(const char *fontPath, int fontSize) {
     return font;
 }
 
-MyUI::MyUI(const char *fontPath) {
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+MyUI::MyUI(const char *fontPath, const char *iconsPath) {
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_RESIZABLE);
     InitWindow(1024, 700, "Зеркaльная комната");
 
     font = initFont(fontPath, fontSize);
@@ -41,12 +43,15 @@ MyUI::MyUI(const char *fontPath) {
 
     updateSize();
 
-    SetWindowMinSize(520, 460);
+    SetWindowMinSize(570, 460);
     SetTargetFPS(60);
     SetExitKey(-1);
 
     GuiSetFont(font);
     GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize);
+    GuiLoadIcons(iconsPath, false);
+
+    GuiSetStyle(DEFAULT, TEXT_LINE_SPACING, 20);
 }
 
 void MyUI::showHint(const char *message) {
@@ -55,8 +60,50 @@ void MyUI::showHint(const char *message) {
     hintActive = true;
 }
 
+void MyUI::showPanel(bool active, WallRound *wallRound) {
+    panelActive = active;
+    MyUI::wallRound = wallRound;
+}
+
 void MyUI::drawPanel() {
-    GuiPanel(panel, "Панель 1");
+    GuiPanel(panel, "Свойства");
+
+    Rectangle label = Rectangle{panel.x + 10, panel.y + 40, panel.width, 50};
+
+    if (panelActive) {
+        Rectangle button = {panel.x + 20, panel.y + 100, 260, 30};
+        if (GuiButton(button, "Изменить выпуклость")) {
+            wallRound->toggleOrient();
+        }
+
+        // Ползунок
+        float sliderValue = wallRound->getRadiusCoef();
+        float newSliderValue = sliderValue;
+        Rectangle slider = {panel.x + 100, panel.y + 50, 135, 25};
+        GuiSliderBar(
+            slider, "Кривизна", TextFormat("%.0f%%", sliderValue),
+            &newSliderValue, 0, 100
+        );
+        if (sliderValue != newSliderValue) {
+            wallRound->setRadiusCoef(newSliderValue);
+        }
+    } else if (mode == UI_NORMAL) {
+        GuiLabel(label, "Кликните на объект, чтобы \nизменить его свойства");
+    } else if (mode == UI_ADD_LINE) {
+        GuiLabel(
+            label,
+            "Кликните на пустое место на \nполе, чтобы добавить плоское "
+            "\nзеркало"
+        );
+    } else if (mode == UI_ADD_ROUND) {
+        GuiLabel(
+            label,
+            "Кликните на пустое место на \nполе, чтобы добавить \nсферическое "
+            "зеркало"
+        );
+    } else if (mode == UI_ADD_RAY) {
+        GuiLabel(label, "Кликните на зеркало, чтобы \nотложить луч света");
+    }
 }
 
 void MyUI::setMode(UIMode newMode) {
@@ -88,8 +135,21 @@ void MyUI::setMode(UIMode newMode) {
         SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         break;
     }
+    case MyUI::UI_EDIT_ROUND: {
+        mode = UI_EDIT_ROUND;
+        SetMouseCursor(MOUSE_CURSOR_ARROW);
+        break;
+    }
+    case MyUI::UI_ADD_RAY: {
+        mode = UI_ADD_RAY;
+        SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+        break;
+    }
     case UI_CLEAR: {
         mode = UI_CLEAR;
+        panelActive = false;
+        wallRound = nullptr;
+        break;
     }
     }
 }
@@ -107,6 +167,7 @@ void MyUI::handleButtons(bool isClosed) {
         setMode(UI_NORMAL);
     }
 
+    GuiLabel(addLineButton.rect, "#24#");
     if (addLineButton.draw(getMode() == UI_ADD_LINE)) {
         if (isClosed) {
             showHint("Комната замкнута");
@@ -121,6 +182,10 @@ void MyUI::handleButtons(bool isClosed) {
         } else {
             setMode(UI_ADD_ROUND);
         }
+    }
+
+    if (addRayButton.draw(getMode() == UI_ADD_RAY)) {
+        setMode(UI_ADD_RAY);
     }
 
     if (clearButton.draw()) {

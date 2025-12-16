@@ -13,7 +13,6 @@ add_subdirectory(libraries)
 set(SOURCES
     main.cpp
     Room.cpp
-    Utils.cpp
     MyUI.cpp
     FileDialog.cpp
 )
