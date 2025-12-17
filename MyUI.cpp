@@ -1,4 +1,4 @@
-#include <cstddef>
+#include <cstdio>
 #include <fstream>
 #include <stdexcept>
 
@@ -173,32 +173,45 @@ void MyUI::showHint(const char *message) {
     hintActive = true;
 }
 
-void MyUI::showPanel(WallRound *wallRound, RayStart *rayStart) {
-    MyUI::wallRound = wallRound;
+void MyUI::showPanel(Wall *wall, RayStart *rayStart) {
+    MyUI::wall = wall;
     MyUI::rayStart = rayStart;
 }
 
 void MyUI::drawPanel() {
     Rectangle label = Rectangle{panel.x + 10, panel.y + 50, panel.width, 50};
 
-    if (wallRound) {
-        GuiPanel(panel, "Свойства стены");
-        // Кнопка
-        Rectangle button = {panel.x + 20, panel.y + 100, 260, 30};
-        if (GuiButton(button, "Изменить выпуклость")) {
-            wallRound->toggleOrient();
-        }
+    if (wall) {
+        Rectangle typeButton = {panel.x + 20, panel.y + 40, 260, 30};
+        WallRound *wallRound = dynamic_cast<WallRound *>(wall);
 
-        // Ползунок
-        float sliderValue = wallRound->getRadiusCoef();
-        float newSliderValue = sliderValue;
-        Rectangle slider = {panel.x + 100, panel.y + 50, 135, 25};
-        GuiSliderBar(
-            slider, "Кривизна", TextFormat("%.0f%%", sliderValue),
-            &newSliderValue, 0, 100
-        );
-        if (sliderValue != newSliderValue) {
-            wallRound->setRadiusCoef(newSliderValue);
+        GuiPanel(panel, "Свойства зеркала");
+        if (wallRound) {
+            if (GuiButton(typeButton, "Тип: сферическое")) {
+                wall = wall->room->changeWallType(wall);
+            }
+
+            // Кнопка
+            Rectangle orientButton = {panel.x + 20, panel.y + 140, 260, 30};
+            if (GuiButton(orientButton, "Изменить выпуклость")) {
+                wallRound->toggleOrient();
+            }
+
+            // Ползунок
+            float sliderValue = wallRound->getRadiusCoef();
+            float newSliderValue = sliderValue;
+            Rectangle slider = {panel.x + 100, panel.y + 90, 135, 25};
+            GuiSliderBar(
+                slider, "Кривизна", TextFormat("%.0f%%", sliderValue),
+                &newSliderValue, 0, 100
+            );
+            if (sliderValue != newSliderValue) {
+                wallRound->setRadiusCoef(newSliderValue);
+            }
+        } else {
+            if (GuiButton(typeButton, "Тип: плоское")) {
+                wall = wall->room->changeWallType(wall);
+            }
         }
     } else if (rayStart) {
         GuiPanel(panel, "Свойства луча");
@@ -214,19 +227,20 @@ void MyUI::drawPanel() {
             rayStart->setAngle(newSliderValue * DEG2RAD);
         }
     } else {
-        GuiPanel(panel, "Свойства");
+        GuiPanel(panel, "");
         if (mode == UI_NORMAL) {
             GuiLabel(
                 label,
-                "Кликните на объект \nкурсором-стрелкой, \nчтобы изменить его "
-                "свойства"
+                "Кликните на объект в режиме \n\"   \", чтобы изменить его "
+                "\nсвойства"
             );
+            GuiDrawIcon(21, panel.x + 20, panel.y + 60, 1, GRAY);
         } else if (mode == UI_ADD_LINE) {
             GuiLabel(
-            label,
-            "Кликните на пустое место на \nполе, чтобы добавить плоское "
-            "\nзеркало"
-        );
+                    label,
+                    "Кликните на пустое место на \nполе, чтобы добавить "
+                    "плоское " "\nзеркало"
+                );
         } else if (mode == UI_ADD_ROUND) {
             GuiLabel(
                 label,
@@ -277,6 +291,11 @@ void MyUI::setMode(UIMode newMode) {
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         break;
     }
+    case MyUI::UI_EDIT_RAY: {
+        mode = UI_EDIT_RAY;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        break;
+    }
     case MyUI::UI_ADD_RAY: {
         mode = UI_ADD_RAY;
         SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
@@ -284,7 +303,7 @@ void MyUI::setMode(UIMode newMode) {
     }
     case UI_CLEAR: {
         mode = UI_CLEAR;
-        wallRound = nullptr;
+        wall = nullptr;
         rayStart = nullptr;
         break;
     }

@@ -2,7 +2,6 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <cmath>
-#include <cstddef>
 
 #include "Room.h"
 
@@ -57,7 +56,10 @@ void Point::draw() {
     DrawCircleV(coord, 4.0f, BROWN);
 }
 
-Wall::Wall(Point *start, Point *end): start(start), end(end) {
+Wall::Wall(Point *start, Point *end, Room *room):
+    start(start),
+    end(end),
+    room(room) {
     start->addWall(this);
     end->addWall(this);
     updateParams();
@@ -97,6 +99,9 @@ void WallRound::updateParams() {
     }
 
     updateAngles();
+    if (room->rayStart) {
+        room->rayStart->updateParams();
+    }
 }
 
 void WallRound::updateAngles() {
@@ -117,8 +122,10 @@ void WallRound::updateAngles() {
     }
 }
 
-WallRound::WallRound(Point *start, Point *end, float radiusCoef = 50):
-    Wall(start, end) {
+WallRound::WallRound(
+    Point *start, Point *end, Room *room, float radiusCoef = 50
+):
+    Wall(start, end, room) {
     isBig = false;
     orient = false;
     if (radiusCoef < 0 || radiusCoef > 100) {
@@ -130,6 +137,9 @@ WallRound::WallRound(Point *start, Point *end, float radiusCoef = 50):
 
 void WallRound::toggleOrient() {
     orient = !orient;
+    if (room->rayStart) {
+        room->rayStart->inverseT();
+    }
     updateParams();
 }
 
@@ -174,6 +184,42 @@ Vector2 WallLine::closestPoint(const Vector2 &point) {
     Vector2 closestPoint = {start.x + t * wallVec.x, start.y + t * wallVec.y};
 
     return closestPoint;
+}
+
+float WallLine::getTByPoint(const Vector2 &point, float presision) {
+    Vector2 start = getStart()->getCoord();
+    Vector2 end = getEnd()->getCoord();
+    Vector2 wallVec = Vector2Subtract(end, start);
+
+    float wallLengthSq = Vector2LengthSqr(wallVec);
+    if (wallLengthSq == 0.0f) {
+        return Vector2Distance(point, start) <= presision ? 0.0f : -1.0f;
+    }
+
+    Vector2 toPoint = Vector2Subtract(point, start);
+    float t = Vector2DotProduct(toPoint, wallVec) / wallLengthSq;
+
+    if (t >= -presision && t <= 1.0f + presision) {
+        Vector2 closest = Vector2Add(start, Vector2Scale(wallVec, t));
+        float distance = Vector2Distance(point, closest);
+
+        if (distance <= presision) {
+            return fmaxf(0.0f, fminf(1.0f, t));
+        }
+    }
+
+    return -1.0f;
+}
+
+Vector2 WallLine::getPointByT(float t) {
+    Vector2 start = getStart()->getCoord();
+    Vector2 end = getEnd()->getCoord();
+
+    t = fmaxf(0.0f, fminf(1.0f, t));
+
+    return Vector2{
+        start.x + t * (end.x - start.x), start.y + t * (end.y - start.y)
+    };
 }
 
 Vector2 WallRound::closestPoint(const Vector2 &point) {
@@ -240,16 +286,122 @@ Vector2 WallRound::closestPoint(const Vector2 &point) {
     }
 }
 
+float normalizeAngle(float angle) {
+    float normalized = fmodf(angle, 360.0f);
+    if (normalized < 0) {
+        normalized += 360.0f;
+    }
+    return normalized;
+}
+
+bool WallRound::crossesZeroDeg() {
+    float normStart = normalizeAngle(startAngle);
+    float normEnd = normalizeAngle(endAngle);
+    return normEnd < normStart;
+}
+
+float WallRound::getAngularLength() {
+    float normStart = normalizeAngle(startAngle);
+    float normEnd = normalizeAngle(endAngle);
+
+    if (normEnd >= normStart) {
+        return normEnd - normStart;
+    } else {
+        return (360.0f - normStart) + normEnd;
+    }
+}
+
+float WallRound::getAngleByT(float t) {
+    t = fmaxf(0.0f, fminf(1.0f, t));
+
+    float normStart = normalizeAngle(startAngle);
+    float span = getAngularLength();
+
+    float angle = normStart + t * span;
+
+    if (angle >= 360.0f) {
+        angle -= 360.0f;
+    }
+
+    return angle;
+}
+
+Vector2 WallRound::getPointByT(float t) {
+    float angleDeg = getAngleByT(t);
+    float angleRad = angleDeg * DEG2RAD;
+
+    return Vector2{
+        center.x + radius * cosf(angleRad), center.y + radius * sinf(angleRad)
+    };
+}
+
+float WallRound::getTByAngle(float angleDeg) {
+    float normAngle = normalizeAngle(angleDeg);
+    float normStart = normalizeAngle(startAngle);
+    float span = getAngularLength();
+
+    float t = 0.0f;
+
+    if (!crossesZeroDeg()) {
+        if (normAngle >= normStart && normAngle <= normStart + span) {
+            t = (normAngle - normStart) / span;
+        } else {
+            return -1.0f;
+        }
+    } else {
+        if (normAngle >= normStart) {
+            t = (normAngle - normStart) / span;
+        } else if (normAngle <= normStart + span - 360.0f) {
+            t = (360.0f - normStart + normAngle) / span;
+        } else {
+            return -1.0f;
+        }
+    }
+
+    return fmaxf(0.0f, fminf(1.0f, t));
+}
+
+float WallRound::getTByPoint(const Vector2 &point, float precision) {
+    Vector2 diff = Vector2Subtract(point, center);
+    float distanceToCenter = Vector2Length(diff);
+
+    if (fabsf(distanceToCenter - radius) > precision) {
+        return -1.0f; // Точка не на окружности
+    }
+
+    float pointAngle = atan2f(diff.y, diff.x) * RAD2DEG;
+
+    return getTByAngle(pointAngle);
+}
+
+bool WallRound::isAngleInArc(float angleDeg, float precision) {
+    float t = getTByAngle(angleDeg);
+    return t >= -precision && t <= 1.0f + precision;
+}
+
+bool WallRound::isPointOnArc(const Vector2 &point, float precision) {
+    return getTByPoint(point, precision) >= 0.0f;
+}
+
 const char *RayStart::InvalidAngle::what() const noexcept {
     return "Угол может быть от 1 до 179";
 }
 
+const char *RayStart::CantStartInCorner::what() const noexcept {
+    return "Нельзя разместить начало луча в углу команаты";
+}
+
 RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
+    t = wall->getTByPoint(point);
     if (wall) {
         RayStart::wall = wall;
     }
 
     RayStart::start = Vector2(point);
+    if (start == wall->getStart()->getCoord() ||
+        start == wall->getEnd()->getCoord()) {
+        throw CantStartInCorner();
+    }
     if (angle * RAD2DEG < 1 || angle * RAD2DEG > 179) {
         throw InvalidAngle();
     }
@@ -261,6 +413,20 @@ void RayStart::setAngle(float angle) {
         throw InvalidAngle();
     }
     RayStart::angle = angle;
+}
+
+void RayStart::setWall(Wall *wall) {
+    RayStart::wall = wall;
+    updateParams();
+}
+
+void RayStart::inverseT() {
+    RayStart::t = 1 - t;
+    updateParams();
+}
+
+void RayStart::updateParams() {
+    start = wall->getPointByT(t);
 }
 
 void RayStart::draw() {
@@ -354,9 +520,9 @@ const char *Room::TooFewPoints::what() const noexcept {
     return TextFormat("Точек не может быть меньше, чем %d", minimumPoints);
 }
 
-const char *Room::WallsCollision::what() const noexcept {
-    return "Стены не могут пересекаться";
-}
+// const char *Room::WallsCollision::what() const noexcept {
+//     return "Стены не могут пересекаться";
+// }
 
 bool Room::isClosed() {
     if (walls.size() < 3) {
@@ -381,7 +547,7 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
                     throw Room::TooFewPoints();
                 }
                 WallLine *wall =
-                    new WallLine(&points[pointsAmount - 1], &points[0]);
+                    new WallLine(&points[pointsAmount - 1], &points[0], this);
                 walls.push_back(wall);
                 return wall;
             } else {
@@ -411,8 +577,9 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
     points.push_back(coord);
     ++pointsAmount;
     if (pointsAmount > 1) {
-        WallLine *wall =
-            new WallLine(&points[pointsAmount - 2], &points[pointsAmount - 1]);
+        WallLine *wall = new WallLine(
+            &points[pointsAmount - 2], &points[pointsAmount - 1], this
+        );
         walls.push_back(wall);
         return wall;
     }
@@ -430,7 +597,7 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
                     throw Room::TooFewPoints();
                 }
                 WallRound *wall = new WallRound(
-                    &points[pointsAmount - 1], &points[0], radiusCoef
+                    &points[pointsAmount - 1], &points[0], this, radiusCoef
                 );
                 walls.push_back(wall);
                 return wall;
@@ -462,12 +629,49 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
     ++pointsAmount;
     if (pointsAmount > 1) {
         WallRound *wall = new WallRound(
-            &points[pointsAmount - 2], &points[pointsAmount - 1], radiusCoef
+            &points[pointsAmount - 2], &points[pointsAmount - 1], this,
+            radiusCoef
         );
         walls.push_back(wall);
         return wall;
     }
     return nullptr;
+}
+
+Wall *Room::changeWallType(Wall *wall) {
+    bool updateRay = rayStart ? (rayStart->getWall() == wall) : false;
+    RayStart *ray = rayStart ? rayStart : nullptr;
+    if (updateRay) {
+        rayStart = nullptr;
+    }
+
+    size_t index = 0;
+    for (size_t i = 0; i < walls.size(); ++i) {
+        if (wall == walls[i]) {
+            index = i;
+            break;
+        }
+    }
+
+    WallRound *wallRound = dynamic_cast<WallRound *>(wall);
+    Point *start = wall->getStart();
+    Point *end = wall->getEnd();
+
+    if (wallRound) {
+        delete wall;
+        wall = new WallLine(start, end, this);
+    } else {
+        delete wall;
+        wall = new WallRound(start, end, this);
+    }
+    walls[index] = wall;
+
+    if (updateRay) {
+        rayStart = ray;
+        rayStart->setWall(wall);
+    }
+
+    return wall;
 }
 
 void Room::movePoint(Point &p, const Vector2 &coord) {
@@ -518,6 +722,7 @@ void Room::clear() {
         delete wall;
     }
     walls.clear();
+    delete rayStart;
 }
 
 Room::~Room() {

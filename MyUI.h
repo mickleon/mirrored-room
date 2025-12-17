@@ -35,7 +35,7 @@ private:
         Rectangle{0, 40, screen.x - rightPanelWidth, screen.y - 40};
 
     Rectangle panel = Rectangle{canvas.width, 0, rightPanelWidth, screen.y};
-    WallRound *wallRound = nullptr;
+    Wall *wall = nullptr;
     RayStart *rayStart = nullptr;
 
     Vector2 hintPosition;
@@ -80,7 +80,7 @@ public:
     Room *openFIle(Room *room);
 
     void showHint(const char *message);
-    void showPanel(WallRound *wallRound, RayStart *rayStart);
+    void showPanel(Wall *wall, RayStart *rayStart);
     void drawPanel();
     void handleButtons(bool isClosed);
 

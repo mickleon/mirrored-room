@@ -36,6 +36,8 @@ public:
     void draw();
 };
 
+class Room;
+
 // Абстрактный класс зеркальной стены
 class Wall {
 protected:
@@ -43,7 +45,8 @@ protected:
     Point *end;   // Конечная точка
 
 public:
-    Wall(Point *start, Point *end);
+    Room *room;
+    Wall(Point *start, Point *end, Room *room);
 
     virtual void updateParams() {} // Обновление параметров стены
 
@@ -60,18 +63,29 @@ public:
 
     virtual float distanceToWall // Возвращает расстояние до `point`
         (const Vector2 &point);
+
+    virtual float getTByPoint(
+        const Vector2 &point, float presicion = 0.1f
+    ) // Получить параметр t в диапазоне [0,1] по точке на стене
+        = 0;
+    virtual Vector2 getPointByT(
+        float t
+    ) = 0; // Получить точку на стене по параметру  t в диапазоне [0,1]
 };
 
 // Прямая стена
 class WallLine: public Wall {
 public:
-    WallLine(Point *start, Point *end): Wall(start, end) {}
+    WallLine(Point *start, Point *end, Room *room): Wall(start, end, room) {}
 
     WallLine(const json &j); // Конструктор из json
 
     void updateParams() {}
 
     Vector2 closestPoint(const Vector2 &point);
+
+    float getTByPoint(const Vector2 &point, float presicion = 0.1f);
+    Vector2 getPointByT(float t);
 
     json to_json();
 
@@ -94,8 +108,20 @@ class WallRound: public Wall {
     void updateParams();
     void updateAngles(); // Обновление углов
 
+    bool crossesZeroDeg();
+
+    float getAngularLength();
+
+    float getAngleByT(float t);
+
+    float getTByAngle(float angleDeg);
+
+    bool isAngleInArc(float angleDeg, float precision = 0.0f);
+
+    bool isPointOnArc(const Vector2 &point, float precision = 0.1f);
+
 public:
-    WallRound(Point *start, Point *end, float radiusCoef);
+    WallRound(Point *start, Point *end, Room *room, float radiusCoef);
 
     class InvalidRadiusCoef:
         public std::exception { // Исключение, выбрасывается, когда неверный
@@ -113,6 +139,9 @@ public:
 
     Vector2 closestPoint(const Vector2 &point);
 
+    Vector2 getPointByT(float t);
+    float getTByPoint(const Vector2 &point, float precision = 0.1f);
+
     json to_json();
 
     void draw();
@@ -123,6 +152,7 @@ class RayStart {
     Vector2 start; // Точка начала луча
     float angle; // Угол относительно родительской стены (от 1 до 179 градусов )
     Wall *wall;  // Родительская стена
+    float t;
 
 public:
     RayStart(const Vector2 &point, Wall *wall, float angle);
@@ -134,11 +164,24 @@ public:
         const char *what() const noexcept;
     };
 
+    class CantStartInCorner:
+        public std::exception { // Исключение, выбрасывается при попытке
+                                // разместит начало луча в углу комнаты
+
+    public:
+        const char *what() const noexcept;
+    };
+
     float getAngle() { return angle; }
 
     Vector2 getStart() { return start; }
 
+    Wall *getWall() { return wall; }
+
     void setAngle(float angle);
+    void setWall(Wall *wall);
+    void inverseT();
+    void updateParams();
 
     void draw();
 };
@@ -193,13 +236,13 @@ public:
         const char *what() const noexcept;
     };
 
-    class WallsCollision:
-        public Room::RoomException { // Исключение, выбрасывается,
-                                     // если стены пересекаются
-
-    public:
-        const char *what() const noexcept;
-    };
+    // class WallsCollision:
+    //     public Room::RoomException { // Исключение, выбрасывается,
+    //                                  // если стены пересекаются
+    //
+    // public:
+    //     const char *what() const noexcept;
+    // };
 
     bool isClosed(); // Замкнутая ли комната
 
@@ -207,8 +250,10 @@ public:
         const Vector2 &coord
     );
     WallRound* addWallRound( // Добавить в конец ломаной cферическую стену
-        const Vector2 &coord, float radiusCoef = 1
+        const Vector2 &coord, float radiusCoef = 50
     );
+
+    Wall *changeWallType(Wall *wall);
 
     void movePoint(
         Point &p, const Vector2 &coord

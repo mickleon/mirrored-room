@@ -1,6 +1,6 @@
 #include "raylib.h"
-#include <cstddef>
 #include <cstdio>
+#include <exception>
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 #undef RAYGUI_IMPLEMENTATION
@@ -75,7 +75,10 @@ int main() {
                            GetMousePosition(), ui.getCanvas()
                        )) {
                 try {
-                    room->addWallLine(GetMousePosition());
+                    WallLine *wall = room->addWallLine(GetMousePosition());
+                    if (wall) {
+                        ui.showPanel(wall, nullptr);
+                    }
                 } catch (std::exception &e) {
                     ui.showHint(e.what());
                 }
@@ -92,8 +95,7 @@ int main() {
                            GetMousePosition(), ui.getCanvas()
                        )) {
                 try {
-                    WallRound *wall =
-                        room->addWallRound(GetMousePosition(), 50);
+                    WallRound *wall = room->addWallRound(GetMousePosition());
                     if (wall) {
                         ui.showPanel(wall, nullptr);
                     }
@@ -107,7 +109,12 @@ int main() {
         if (ui.getMode() == MyUI::UI_ADD_RAY) {
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                 CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
-                room->addRay(GetMousePosition());
+                try {
+                    room->addRay(GetMousePosition());
+                } catch (const std::exception &e) {
+                    ui.showHint(e.what());
+                }
+
                 ui.showPanel(nullptr, room->rayStart);
             }
         }
@@ -120,9 +127,7 @@ int main() {
             ui.getMode() == MyUI::UI_EDIT_ROUND ||
             ui.getMode() == MyUI::UI_EDIT_RAY) {
             if (CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
-                WallRound *closest = dynamic_cast<WallRound *>(
-                    room->closestWall(GetMousePosition())
-                );
+                Wall *closest = room->closestWall(GetMousePosition());
                 RayStart *ray = room->closestRay(GetMousePosition());
                 if (ray) {
                     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
