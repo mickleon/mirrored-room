@@ -6,6 +6,7 @@
 #undef RAYGUI_IMPLEMENTATION
 
 #include "MyUI.h"
+#include "Ray.h"
 #include "Room.h"
 
 int main() {
