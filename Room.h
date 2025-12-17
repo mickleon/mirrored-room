@@ -58,6 +58,8 @@ public:
 
     Point *getEnd() { return end; }
 
+    virtual Vector2 getNormal(const Vector2 &point) = 0;
+
     virtual Vector2 closestPoint // Возвращает ближайшую точку к `point`
         (const Vector2 &point) = 0;
 
@@ -83,6 +85,7 @@ public:
     void updateParams() {}
 
     Vector2 closestPoint(const Vector2 &point);
+    Vector2 getNormal(const Vector2 &point);
 
     float getTByPoint(const Vector2 &point, float presicion = 0.1f);
     Vector2 getPointByT(float t);
@@ -139,6 +142,8 @@ public:
 
     Vector2 closestPoint(const Vector2 &point);
 
+    Vector2 getNormal(const Vector2 &point);
+
     Vector2 getPointByT(float t);
     float getTByPoint(const Vector2 &point, float precision = 0.1f);
 
@@ -147,12 +152,27 @@ public:
     void draw();
 };
 
+class RaySegment {
+private:
+    Vector2 start;
+    Vector2 end;
+    bool hasHit;      // Было ли столкновение со стеной
+    Vector2 hitPoint; // Точка столкновения (если есть)
+
+    Vector2 intersectionWithWallLine(WallLine *wall);
+
+public:
+    RaySegment(const Vector2 &start, const Vector2 &end);
+    void draw() const;
+};
+
 // Класс вершины луча
 class RayStart {
     Vector2 start; // Точка начала луча
     float angle; // Угол относительно родительской стены (от 1 до 179 градусов )
     Wall *wall;  // Родительская стена
     float t;
+    RaySegment *ray = nullptr;
 
 public:
     RayStart(const Vector2 &point, Wall *wall, float angle);
@@ -181,9 +201,12 @@ public:
     void setAngle(float angle);
     void setWall(Wall *wall);
     void inverseT();
+    void updateRaySegments();
     void updateParams();
 
     void draw();
+
+    ~RayStart();
 };
 
 // Комната, представляющая собой многоугольник

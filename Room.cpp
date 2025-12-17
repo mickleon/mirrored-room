@@ -286,6 +286,17 @@ Vector2 WallRound::closestPoint(const Vector2 &point) {
     }
 }
 
+Vector2 WallLine::getNormal(const Vector2 &point) {
+    Vector2 wallVec = Vector2Subtract(end->getCoord(), start->getCoord());
+    Vector2 normal = Vector2Normalize({-wallVec.y, wallVec.x});
+    return normal;
+}
+
+Vector2 WallRound::getNormal(const Vector2 &point) {
+    Vector2 toCenter = Vector2Subtract(center, point);
+    return Vector2Normalize(toCenter);
+}
+
 float normalizeAngle(float angle) {
     float normalized = fmodf(angle, 360.0f);
     if (normalized < 0) {
@@ -383,6 +394,41 @@ bool WallRound::isPointOnArc(const Vector2 &point, float precision) {
     return getTByPoint(point, precision) >= 0.0f;
 }
 
+RaySegment::RaySegment(const Vector2 &start, const Vector2 &end):
+    start(start),
+    end(end) {}
+
+void RaySegment::draw() const {
+    DrawLineEx(start, end, 4.0f, ORANGE);
+}
+
+Vector2 RaySegment::intersectionWithWallLine(WallLine *wall) {
+    Vector2 wallStart = wall->getStart()->getCoord();
+    Vector2 wallEnd = wall->getEnd()->getCoord();
+
+    float denominator = (start.x - end.x) * (wallStart.y - wallEnd.y) -
+                        (start.y - end.y) * (wallStart.x - wallEnd.x);
+
+    if (fabsf(denominator) < 0.0001f) {
+        return Vector2{NAN, NAN};
+    }
+
+    float t = ((start.x - wallStart.x) * (wallStart.y - wallEnd.y) -
+               (start.y - wallStart.y) * (wallStart.x - wallEnd.x)) /
+              denominator;
+    float u = -((start.x - end.x) * (start.y - wallStart.y) -
+                (start.y - end.y) * (start.x - wallStart.x)) /
+              denominator;
+
+    if (t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f) {
+        return Vector2{
+            start.x + t * (end.x - start.x), start.y + t * (end.y - start.y)
+        };
+    }
+
+    return Vector2{NAN, NAN};
+}
+
 const char *RayStart::InvalidAngle::what() const noexcept {
     return "Угол может быть от 1 до 179";
 }
@@ -406,6 +452,7 @@ RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
         throw InvalidAngle();
     }
     RayStart::angle = angle;
+    updateRaySegments();
 }
 
 void RayStart::setAngle(float angle) {
@@ -413,6 +460,7 @@ void RayStart::setAngle(float angle) {
         throw InvalidAngle();
     }
     RayStart::angle = angle;
+    updateRaySegments();
 }
 
 void RayStart::setWall(Wall *wall) {
@@ -425,12 +473,28 @@ void RayStart::inverseT() {
     updateParams();
 }
 
+void RayStart::updateRaySegments() {
+    if (ray) {
+        delete ray;
+    }
+    Vector2 normal = wall->getNormal(start);
+    Vector2 rayDir = Vector2Rotate(normal, angle - PI / 2);
+    Vector2 rayEnd = Vector2Add(start, Vector2Scale(rayDir, 10000.0f));
+    ray = new RaySegment(start, rayEnd);
+}
+
 void RayStart::updateParams() {
     start = wall->getPointByT(t);
+    updateRaySegments();
 }
 
 void RayStart::draw() {
     DrawCircleV(start, 10, ORANGE);
+    ray->draw();
+}
+
+RayStart::~RayStart() {
+    delete ray;
 }
 
 Wall *Room::closestWall(const Vector2 &point) {
@@ -726,6 +790,7 @@ void Room::clear() {
     }
     walls.clear();
     delete rayStart;
+    rayStart = nullptr;
 }
 
 Room::~Room() {
