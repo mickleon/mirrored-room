@@ -225,8 +225,7 @@ Vector2 WallLine::getPointByT(float t) {
 Vector2 WallRound::closestPoint(const Vector2 &point) {
     float distanceToCenter = Vector2Distance(point, center);
     Vector2 diff = Vector2Subtract(point, center);
-    float pointAngle =
-        atan2f(diff.y, diff.x) * RAD2DEG; // Конвертируем в градусы
+    float pointAngle = atan2f(diff.y, diff.x) * RAD2DEG;
     if (pointAngle < 0) {
         pointAngle += 360.0f;
     }
@@ -250,16 +249,12 @@ Vector2 WallRound::closestPoint(const Vector2 &point) {
     }
 
     if (isWithinArc) {
-        // Ближайшая точка находится на окружности в том же направлении
-        // Нормализуем вектор diff до длины радиуса
         if (distanceToCenter > 0) {
             float scale = radius / distanceToCenter;
             return Vector2{
                 center.x + diff.x * scale, center.y + diff.y * scale
             };
         } else {
-            // Если точка совпадает с центром, возвращаем любую точку на
-            // окружности (например, по начальному углу)
             float angleRad = normalizedStart * DEG2RAD;
             return Vector2{
                 center.x + radius * cosf(angleRad),
@@ -377,7 +372,7 @@ float WallRound::getTByPoint(const Vector2 &point, float precision) {
     float distanceToCenter = Vector2Length(diff);
 
     if (fabsf(distanceToCenter - radius) > precision) {
-        return -1.0f; // Точка не на окружности
+        return -1.0f;
     }
 
     float pointAngle = atan2f(diff.y, diff.x) * RAD2DEG;
@@ -394,12 +389,29 @@ bool WallRound::isPointOnArc(const Vector2 &point, float precision) {
     return getTByPoint(point, precision) >= 0.0f;
 }
 
+Vector2 WallRound::getCenter() {
+    return center;
+}
+
+float WallRound::getRadius() {
+    return radius;
+}
+
+float WallRound::getStartAngle() {
+    return startAngle;
+}
+
+float WallRound::getEndAngle() {
+    return endAngle;
+}
+
 RaySegment::RaySegment(const Vector2 &start, const Vector2 &end):
     start(start),
-    end(end) {}
+    end(end),
+    hasHit(false) {}
 
 void RaySegment::draw() const {
-    DrawLineEx(start, end, 4.0f, ORANGE);
+    DrawLineEx(start, hasHit ? hitPoint : end, 4.0f, ORANGE);
 }
 
 Vector2 RaySegment::intersectionWithWallLine(WallLine *wall) {
@@ -427,6 +439,104 @@ Vector2 RaySegment::intersectionWithWallLine(WallLine *wall) {
     }
 
     return Vector2{NAN, NAN};
+}
+
+Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
+    Vector2 center = wall->getCenter();
+    float radius = wall->getRadius();
+
+    Vector2 d = Vector2Subtract(end, start);
+    Vector2 f = Vector2Subtract(start, center);
+
+    float a = Vector2DotProduct(d, d);
+    float b = 2 * Vector2DotProduct(f, d);
+    float c = Vector2DotProduct(f, f) - radius * radius;
+
+    float D = b * b - 4 * a * c;
+
+    if (D < 0) {
+        return Vector2{NAN, NAN};
+    }
+
+    D = sqrtf(D);
+    float t1 = (-b - D) / (2 * a);
+    float t2 = (-b + D) / (2 * a);
+
+    Vector2 closestIntersection = {NAN, NAN};
+    float minT = MAXFLOAT;
+
+    for (float t : {t1, t2}) {
+        if (t >= 0.0f && t <= 1.0f && t < minT) {
+            Vector2 point = Vector2{start.x + t * d.x, start.y + t * d.y};
+
+            Vector2 diff = Vector2Subtract(point, center);
+            float angle = atan2f(diff.y, diff.x) * RAD2DEG;
+
+            if (angle < 0) {
+                angle += 360.0f;
+            }
+
+            float startAngle = wall->getStartAngle();
+            float endAngle = wall->getEndAngle();
+
+            float normStart = fmodf(startAngle, 360.0f);
+            float normEnd = fmodf(endAngle, 360.0f);
+            if (normStart < 0) {
+                normStart += 360.0f;
+            }
+            if (normEnd < 0) {
+                normEnd += 360.0f;
+            }
+
+            bool isInArc = false;
+
+            if (normEnd >= normStart) {
+                isInArc = (angle >= normStart && angle <= normEnd);
+            } else {
+                isInArc = (angle >= normStart || angle <= normEnd);
+            }
+
+            if (isInArc) {
+                closestIntersection = point;
+                minT = t;
+            }
+        }
+    }
+
+    return closestIntersection;
+}
+
+void RaySegment::findIntersections(Room *room, Wall *originWall) {
+    Vector2 closestHit = {NAN, NAN};
+    float minDist = MAXFLOAT;
+
+    for (Wall *wall : room->getWalls()) {
+        Vector2 intersection = {NAN, NAN};
+
+        WallLine *wallLine = dynamic_cast<WallLine *>(wall);
+        WallRound *wallRound = dynamic_cast<WallRound *>(wall);
+
+        if (wallLine) {
+            intersection = intersectionWithWallLine(wallLine);
+        } else if (wallRound) {
+            intersection = intersectionWithWallRound(wallRound);
+        }
+
+        if (!isnan(intersection.x) && !isnan(intersection.y)) {
+            float dist = Vector2Distance(start, intersection);
+            if (dist > 0.1f && dist < minDist) {
+                minDist = dist;
+                closestHit = intersection;
+            }
+        }
+    }
+
+    if (!isnan(closestHit.x) && !isnan(closestHit.y)) {
+        hasHit = true;
+        hitPoint = closestHit;
+    } else {
+        hasHit = false;
+    }
 }
 
 const char *RayStart::InvalidAngle::what() const noexcept {
@@ -481,6 +591,7 @@ void RayStart::updateRaySegments() {
     Vector2 rayDir = Vector2Rotate(normal, angle - PI / 2);
     Vector2 rayEnd = Vector2Add(start, Vector2Scale(rayDir, 10000.0f));
     ray = new RaySegment(start, rayEnd);
+    ray->findIntersections(wall->room, wall);
 }
 
 void RayStart::updateParams() {
@@ -584,10 +695,6 @@ const char *Room::TooFewPoints::what() const noexcept {
     return TextFormat("Точек не может быть меньше, чем %d", minimumPoints);
 }
 
-// const char *Room::WallsCollision::what() const noexcept {
-//     return "Стены не могут пересекаться";
-// }
-
 bool Room::isClosed() {
     if (walls.size() < 3) {
         return false;
@@ -623,20 +730,6 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
     if (pointsAmount >= maximumPoints) {
         throw Room::TooManyPoints();
     }
-
-    // if (walls.size()) {
-    //     Vector2 collision = {-1, -1};
-    //     for (Wall *wall : walls) {
-    //         if (CheckCollisionLines(
-    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
-    //                 points[pointsAmount - 1].getCoord(), coord, &collision
-    //             ) &&
-    //             collision.x != points[pointsAmount - 1].getX() &&
-    //             collision.y != points[pointsAmount - 1].getY()) {
-    //             throw Room::WallsCollision();
-    //         }
-    //     }
-    // }
 
     points.push_back(coord);
     ++pointsAmount;
@@ -675,20 +768,6 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
         throw Room::TooManyPoints();
     }
 
-    // if (walls.size()) {
-    //     Vector2 collision = {-1, -1};
-    //     for (Wall *wall : walls) {
-    //         if (CheckCollisionLines(
-    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
-    //                 points[pointsAmount - 1].getCoord(), coord, &collision
-    //             ) &&
-    //             collision.x != points[pointsAmount - 1].getX() &&
-    //             collision.y != points[pointsAmount - 1].getY()) {
-    //             throw Room::WallsCollision();
-    //         }
-    //     }
-    // }
-
     points.push_back(coord);
     ++pointsAmount;
     if (pointsAmount > 1) {
@@ -717,17 +796,29 @@ Wall *Room::changeWallType(Wall *wall) {
         }
     }
 
-    WallRound *wallRound = dynamic_cast<WallRound *>(wall);
     Point *start = wall->getStart();
     Point *end = wall->getEnd();
+    bool isRound = dynamic_cast<WallRound *>(wall) != nullptr;
 
-    if (wallRound) {
-        delete wall;
+    auto &startWalls = start->walls;
+    auto &endWalls = end->walls;
+
+    startWalls.erase(
+        std::remove(startWalls.begin(), startWalls.end(), wall),
+        startWalls.end()
+    );
+    endWalls.erase(
+        std::remove(endWalls.begin(), endWalls.end(), wall), endWalls.end()
+    );
+
+    Wall *bind = wall;
+
+    if (isRound) {
         wall = new WallLine(start, end, this);
     } else {
-        delete wall;
         wall = new WallRound(start, end, this);
     }
+    delete bind;
     walls[index] = wall;
 
     if (updateRay) {
@@ -781,6 +872,10 @@ void Room::addRay(const Vector2 &point) {
         }
         rayStart = new RayStart(closestPoint, closestWall, defaultRayAngle);
     }
+}
+
+vector<Wall *> &Room::getWalls() {
+    return walls;
 }
 
 void Room::clear() {

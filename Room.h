@@ -10,12 +10,17 @@
 using std::vector, nlohmann::json;
 
 class Wall;
+class Room;
+class WallLine;
+class WallRound;
 
 // Класс точек между зеркальнымы стенами
 class Point {
 private:
     Vector2 coord;        // Ее координаты
     vector<Wall *> walls; // Связанные с ней стены
+
+    friend class Room;
 
 public:
     Point(const Vector2 &coord);
@@ -35,8 +40,6 @@ public:
 
     void draw();
 };
-
-class Room;
 
 // Абстрактный класс зеркальной стены
 class Wall {
@@ -119,10 +122,6 @@ class WallRound: public Wall {
 
     float getTByAngle(float angleDeg);
 
-    bool isAngleInArc(float angleDeg, float precision = 0.0f);
-
-    bool isPointOnArc(const Vector2 &point, float precision = 0.1f);
-
 public:
     WallRound(Point *start, Point *end, Room *room, float radiusCoef);
 
@@ -147,6 +146,16 @@ public:
     Vector2 getPointByT(float t);
     float getTByPoint(const Vector2 &point, float precision = 0.1f);
 
+    bool isAngleInArc(float angleDeg, float precision = 0.0f);
+
+    bool isPointOnArc(const Vector2 &point, float precision = 0.1f);
+
+    // Новые методы для доступа к параметрам дуги
+    Vector2 getCenter();
+    float getRadius();
+    float getStartAngle();
+    float getEndAngle();
+
     json to_json();
 
     void draw();
@@ -160,9 +169,11 @@ private:
     Vector2 hitPoint; // Точка столкновения (если есть)
 
     Vector2 intersectionWithWallLine(WallLine *wall);
+    Vector2 intersectionWithWallRound(WallRound *wall);
 
 public:
     RaySegment(const Vector2 &start, const Vector2 &end);
+    void findIntersections(Room *room, Wall *originWall);
     void draw() const;
 };
 
@@ -260,14 +271,6 @@ public:
         const char *what() const noexcept;
     };
 
-    // class WallsCollision:
-    //     public Room::RoomException { // Исключение, выбрасывается,
-    //                                  // если стены пересекаются
-    //
-    // public:
-    //     const char *what() const noexcept;
-    // };
-
     bool isClosed(); // Замкнутая ли комната
 
     WallLine *addWallLine( // Добавить в конец ломаной прямую стену
@@ -288,6 +291,8 @@ public:
     json to_json(); // Экспорт в json
 
     void addRay(const Vector2 &point);
+
+    vector<Wall *> &getWalls(); // Получить доступ к стенам
 
     void clear(); // Очистка комнаты
 
