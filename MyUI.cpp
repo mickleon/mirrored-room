@@ -259,6 +259,8 @@ void MyUI::setMode(UIMode newMode) {
     switch (newMode) {
     case UI_IMPORT: {
         mode = UI_IMPORT;
+        wall = nullptr;
+        rayStart = nullptr;
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         fileDialog.show(FileDialog::FILE_DIALOG_OPEN);
         break;
