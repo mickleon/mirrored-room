@@ -194,6 +194,7 @@ private:
 
 public:
     RayStart *rayStart = nullptr;
+    float defaultRayAngle = PI / 2;
 
     Room();
     Room(const json &j); // Конструктор из json

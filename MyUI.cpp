@@ -225,6 +225,8 @@ void MyUI::drawPanel() {
         );
         if (sliderValue != newSliderValue) {
             rayStart->setAngle(newSliderValue * DEG2RAD);
+            rayStart->getWall()->room->defaultRayAngle =
+                newSliderValue * DEG2RAD;
         }
     } else {
         GuiPanel(panel, "");

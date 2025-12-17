@@ -712,7 +712,7 @@ void Room::addRay(const Vector2 &point) {
     Wall *closestWall = Room::closestWall(point);
     if (closestWall) {
         Vector2 closestPoint = closestWall->closestPoint(point);
-        rayStart = new RayStart(closestPoint, closestWall);
+        rayStart = new RayStart(closestPoint, closestWall, defaultRayAngle);
     }
 }
 
