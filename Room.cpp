@@ -2,14 +2,12 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <cmath>
-#include <cstdio>
+#include <cstddef>
 
 #include "Room.h"
 
 using nlohmann::json;
 
-const Color Wall::color = BROWN;
-const float Wall::thick = 4;
 const int Room::minimalDistance = 20;
 const int Room::maximumPoints = 9;
 const int Room::minimumPoints = 4;
@@ -72,7 +70,12 @@ json WallLine::to_json() {
 }
 
 void WallLine::draw() {
-    DrawLineEx(start->getCoord(), end->getCoord(), thick, color);
+    DrawLineEx(start->getCoord(), end->getCoord(), 4, BROWN);
+}
+
+const char *WallRound::InvalidRadiusCoef::what() const noexcept {
+    return "Значение коэффициента для вычисления радиуса должно быть от 0 до "
+           "100";
 }
 
 void WallRound::updateParams() {
@@ -118,6 +121,9 @@ WallRound::WallRound(Point *start, Point *end, float radiusCoef = 50):
     Wall(start, end) {
     isBig = false;
     orient = false;
+    if (radiusCoef < 0 || radiusCoef > 100) {
+        throw InvalidRadiusCoef();
+    }
     WallRound::radiusCoef = radiusCoef;
     updateParams();
 }
@@ -128,6 +134,9 @@ void WallRound::toggleOrient() {
 }
 
 void WallRound::setRadiusCoef(float radiusCoef) {
+    if (radiusCoef < 0 || radiusCoef > 100) {
+        throw InvalidRadiusCoef();
+    }
     WallRound::radiusCoef = radiusCoef;
     updateParams();
 }
@@ -140,8 +149,7 @@ json WallRound::to_json() {
 
 void WallRound::draw() {
     DrawRing(
-        center, radius - thick / 2, radius + thick / 2, startAngle, endAngle,
-        36.0f, color
+        center, radius - 2, radius + 2, startAngle, endAngle, 36.0f, BROWN
     );
 }
 
@@ -232,17 +240,31 @@ Vector2 WallRound::closestPoint(const Vector2 &point) {
     }
 }
 
+const char *RayStart::InvalidAngle::what() const noexcept {
+    return "Угол может быть от 1 до 179";
+}
+
 RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
     if (wall) {
         RayStart::wall = wall;
     }
 
-    RayStart::point = Vector2(point);
+    RayStart::start = Vector2(point);
+    if (angle * RAD2DEG < 1 || angle * RAD2DEG > 179) {
+        throw InvalidAngle();
+    }
+    RayStart::angle = angle;
+}
+
+void RayStart::setAngle(float angle) {
+    if (angle * RAD2DEG < 1 || angle * RAD2DEG > 179) {
+        throw InvalidAngle();
+    }
     RayStart::angle = angle;
 }
 
 void RayStart::draw() {
-    DrawCircleV(point, 10, ORANGE);
+    DrawCircleV(start, 10, ORANGE);
 }
 
 Wall *Room::closestWall(const Vector2 &point) {
@@ -259,6 +281,13 @@ Wall *Room::closestWall(const Vector2 &point) {
     }
 
     return closeWall;
+}
+
+RayStart *Room::closestRay(const Vector2 &point) {
+    if (rayStart && Vector2Distance(point, rayStart->getStart()) < 20) {
+        return rayStart;
+    }
+    return nullptr;
 }
 
 Room::Room() {
@@ -341,7 +370,7 @@ bool Room::isClosed() {
     return false;
 }
 
-void Room::addWallLine(const Vector2 &coord) {
+WallLine *Room::addWallLine(const Vector2 &coord) {
     size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
@@ -354,7 +383,7 @@ void Room::addWallLine(const Vector2 &coord) {
                 WallLine *wall =
                     new WallLine(&points[pointsAmount - 1], &points[0]);
                 walls.push_back(wall);
-                return;
+                return wall;
             } else {
                 throw Room::PointsAreTooClose();
             }
@@ -385,10 +414,12 @@ void Room::addWallLine(const Vector2 &coord) {
         WallLine *wall =
             new WallLine(&points[pointsAmount - 2], &points[pointsAmount - 1]);
         walls.push_back(wall);
+        return wall;
     }
+    return nullptr;
 }
 
-void Room::addWallRound(const Vector2 &coord, float radiusCoef) {
+WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
     size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
@@ -402,7 +433,7 @@ void Room::addWallRound(const Vector2 &coord, float radiusCoef) {
                     &points[pointsAmount - 1], &points[0], radiusCoef
                 );
                 walls.push_back(wall);
-                return;
+                return wall;
             } else {
                 throw Room::PointsAreTooClose();
             }
@@ -434,7 +465,9 @@ void Room::addWallRound(const Vector2 &coord, float radiusCoef) {
             &points[pointsAmount - 2], &points[pointsAmount - 1], radiusCoef
         );
         walls.push_back(wall);
+        return wall;
     }
+    return nullptr;
 }
 
 void Room::movePoint(Point &p, const Vector2 &coord) {

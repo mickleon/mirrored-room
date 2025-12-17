@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cmath>
-#include <cstddef>
 #include <exception>
 #include <vector>
 
@@ -44,9 +43,6 @@ protected:
     Point *end;   // Конечная точка
 
 public:
-    const Color static color; // Цвет
-    const float static thick; // Толщина
-
     Wall(Point *start, Point *end);
 
     virtual void updateParams() {} // Обновление параметров стены
@@ -87,8 +83,7 @@ class WallRound: public Wall {
     float startAngle; // Угол начала относительно горизонтальной прямой
     float endAngle;   // Угол конца относительно горизонтальной прямой
 
-    float radiusCoef; // Коэфициент, на который нужно умножить хорду, чтобы
-                      // получить радиус
+    float radiusCoef; // Коэфициент для вычисления радиуса (от 0 до 100)
     float chord;      // Длина хорды между двумя точками
     float radius;     // Радиус дуги
     Vector2 center;   // Центр дуги
@@ -101,6 +96,14 @@ class WallRound: public Wall {
 
 public:
     WallRound(Point *start, Point *end, float radiusCoef);
+
+    class InvalidRadiusCoef:
+        public std::exception { // Исключение, выбрасывается, когда неверный
+                                // radiusCoef
+
+    public:
+        const char *what() const noexcept;
+    };
 
     void toggleOrient();
 
@@ -117,12 +120,25 @@ public:
 
 // Класс вершины луча
 class RayStart {
-    Vector2 point;
-    float angle;
-    Wall *wall;
+    Vector2 start; // Точка начала луча
+    float angle; // Угол относительно родительской стены (от 1 до 179 градусов )
+    Wall *wall;  // Родительская стена
 
 public:
     RayStart(const Vector2 &point, Wall *wall, float angle);
+
+    class InvalidAngle: public std::exception { // Исключение, выбрасывается,
+                                                // когда неверный угол
+
+    public:
+        const char *what() const noexcept;
+    };
+
+    float getAngle() { return angle; }
+
+    Vector2 getStart() { return start; }
+
+    void setAngle(float angle);
 
     void draw();
 };
@@ -140,6 +156,7 @@ public:
     Room(const json &j); // Конструктор из json
 
     Wall *closestWall(const Vector2 &point);
+    RayStart *closestRay(const Vector2 &point);
 
     const int static minimalDistance; // Минимальное расстояние, на котором
                                       // рядом могут находиться точки
@@ -186,10 +203,10 @@ public:
 
     bool isClosed(); // Замкнутая ли комната
 
-    void addWallLine( // Добавить в конец ломаной прямую стену
+    WallLine *addWallLine( // Добавить в конец ломаной прямую стену
         const Vector2 &coord
     );
-    void addWallRound( // Добавить в конец ломаной cферическую стену
+    WallRound* addWallRound( // Добавить в конец ломаной cферическую стену
         const Vector2 &coord, float radiusCoef = 1
     );
 

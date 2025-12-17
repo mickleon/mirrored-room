@@ -1,4 +1,6 @@
 #include "raylib.h"
+#include <cstddef>
+#include <cstdio>
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 #undef RAYGUI_IMPLEMENTATION
@@ -90,7 +92,11 @@ int main() {
                            GetMousePosition(), ui.getCanvas()
                        )) {
                 try {
-                    room->addWallRound(GetMousePosition(), 50);
+                    WallRound *wall =
+                        room->addWallRound(GetMousePosition(), 50);
+                    if (wall) {
+                        ui.showPanel(wall, nullptr);
+                    }
                 } catch (std::exception &e) {
                     ui.showHint(e.what());
                 }
@@ -102,6 +108,7 @@ int main() {
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
                 CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
                 room->addRay(GetMousePosition());
+                ui.showPanel(nullptr, room->rayStart);
             }
         }
 
@@ -110,23 +117,30 @@ int main() {
 
         // Правая панель
         if (ui.getMode() == MyUI::UI_NORMAL ||
-            ui.getMode() == MyUI::UI_EDIT_ROUND) {
+            ui.getMode() == MyUI::UI_EDIT_ROUND ||
+            ui.getMode() == MyUI::UI_EDIT_RAY) {
             if (CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
                 WallRound *closest = dynamic_cast<WallRound *>(
                     room->closestWall(GetMousePosition())
                 );
-                if (closest) {
+                RayStart *ray = room->closestRay(GetMousePosition());
+                if (ray) {
+                    SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+                } else if (closest) {
                     SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
                 } else {
                     SetMouseCursor(MOUSE_CURSOR_DEFAULT);
                 }
                 if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                    if (closest) {
+                    if (ray) {
+                        ui.setMode(MyUI::UI_EDIT_RAY);
+                        ui.showPanel(nullptr, ray);
+                    } else if (closest) {
                         ui.setMode(MyUI::UI_EDIT_ROUND);
-                        ui.showPanel(true, closest);
+                        ui.showPanel(closest, nullptr);
                     } else {
                         ui.setMode(MyUI::UI_NORMAL);
-                        ui.showPanel(false, nullptr);
+                        ui.showPanel(nullptr, nullptr);
                     }
                 }
             }

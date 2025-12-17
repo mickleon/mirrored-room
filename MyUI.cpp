@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <fstream>
 #include <stdexcept>
 
@@ -26,7 +27,7 @@ Font MyUI::initFont(const char *fontPath, int fontSize) {
     int* chars = LoadCodepoints(
         "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
         "0123456789"
-        ".,!?-+()[]{}:;/\\\"'`~@#$%^&*=_|<> "
+        ".,!?-+()[]{}:;/\\\"'`~@#$%^&*=_|<>° "
         "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm", 
         &charsCount
     );
@@ -172,17 +173,17 @@ void MyUI::showHint(const char *message) {
     hintActive = true;
 }
 
-void MyUI::showPanel(bool active, WallRound *wallRound) {
-    panelActive = active;
+void MyUI::showPanel(WallRound *wallRound, RayStart *rayStart) {
     MyUI::wallRound = wallRound;
+    MyUI::rayStart = rayStart;
 }
 
 void MyUI::drawPanel() {
-    GuiPanel(panel, "Свойства");
+    Rectangle label = Rectangle{panel.x + 10, panel.y + 50, panel.width, 50};
 
-    Rectangle label = Rectangle{panel.x + 10, panel.y + 40, panel.width, 50};
-
-    if (panelActive) {
+    if (wallRound) {
+        GuiPanel(panel, "Свойства стены");
+        // Кнопка
         Rectangle button = {panel.x + 20, panel.y + 100, 260, 30};
         if (GuiButton(button, "Изменить выпуклость")) {
             wallRound->toggleOrient();
@@ -199,22 +200,42 @@ void MyUI::drawPanel() {
         if (sliderValue != newSliderValue) {
             wallRound->setRadiusCoef(newSliderValue);
         }
-    } else if (mode == UI_NORMAL) {
-        GuiLabel(label, "Кликните на объект, чтобы \nизменить его свойства");
-    } else if (mode == UI_ADD_LINE) {
-        GuiLabel(
+    } else if (rayStart) {
+        GuiPanel(panel, "Свойства луча");
+        // Ползунок
+        float sliderValue = rayStart->getAngle() * RAD2DEG;
+        float newSliderValue = sliderValue;
+        Rectangle slider = {panel.x + 70, panel.y + 50, 165, 25};
+        GuiSliderBar(
+            slider, "Угол", TextFormat("%.0f°", sliderValue), &newSliderValue,
+            1.01, 179
+        );
+        if (sliderValue != newSliderValue) {
+            rayStart->setAngle(newSliderValue * DEG2RAD);
+        }
+    } else {
+        GuiPanel(panel, "Свойства");
+        if (mode == UI_NORMAL) {
+            GuiLabel(
+                label,
+                "Кликните на объект \nкурсором-стрелкой, \nчтобы изменить его "
+                "свойства"
+            );
+        } else if (mode == UI_ADD_LINE) {
+            GuiLabel(
             label,
             "Кликните на пустое место на \nполе, чтобы добавить плоское "
             "\nзеркало"
         );
-    } else if (mode == UI_ADD_ROUND) {
-        GuiLabel(
-            label,
-            "Кликните на пустое место на \nполе, чтобы добавить \nсферическое "
-            "зеркало"
-        );
-    } else if (mode == UI_ADD_RAY) {
-        GuiLabel(label, "Кликните на зеркало, чтобы \nотложить луч света");
+        } else if (mode == UI_ADD_ROUND) {
+            GuiLabel(
+                label,
+                "Кликните на пустое место на \nполе, чтобы добавить "
+                "\nсферическое " "зеркало"
+            );
+        } else if (mode == UI_ADD_RAY) {
+            GuiLabel(label, "Кликните на зеркало, чтобы \nотложить луч света");
+        }
     }
 }
 
@@ -247,9 +268,13 @@ void MyUI::setMode(UIMode newMode) {
         SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         break;
     }
+    case MyUI::UI_EDIT_LINE: {
+        mode = UI_EDIT_LINE;
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+    }
     case MyUI::UI_EDIT_ROUND: {
         mode = UI_EDIT_ROUND;
-        SetMouseCursor(MOUSE_CURSOR_ARROW);
+        SetMouseCursor(MOUSE_CURSOR_DEFAULT);
         break;
     }
     case MyUI::UI_ADD_RAY: {
@@ -259,8 +284,8 @@ void MyUI::setMode(UIMode newMode) {
     }
     case UI_CLEAR: {
         mode = UI_CLEAR;
-        panelActive = false;
         wallRound = nullptr;
+        rayStart = nullptr;
         break;
     }
     }
@@ -275,7 +300,10 @@ void MyUI::handleButtons(bool isClosed) {
         setMode(UI_EXPORT);
     }
 
-    if (normalButton.draw(getMode() == UI_NORMAL)) {
+    if (normalButton.draw(
+            getMode() == UI_NORMAL || getMode() == UI_EDIT_ROUND ||
+            getMode() == UI_EDIT_RAY
+        )) {
         setMode(UI_NORMAL);
     }
 
