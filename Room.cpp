@@ -405,13 +405,25 @@ float WallRound::getEndAngle() {
     return endAngle;
 }
 
-RaySegment::RaySegment(const Vector2 &start, const Vector2 &end):
+RaySegment::RaySegment(const Vector2 &start, const Vector2 &end, int depth):
     start(start),
     end(end),
-    hasHit(false) {}
+    hasHit(false),
+    hitWall(nullptr),
+    next(nullptr),
+    depth(depth) {}
+
+RaySegment::~RaySegment() {
+    if (next) {
+        delete next;
+    }
+}
 
 void RaySegment::draw() const {
     DrawLineEx(start, hasHit ? hitPoint : end, 4.0f, ORANGE);
+    if (next) {
+        next->draw();
+    }
 }
 
 Vector2 RaySegment::intersectionWithWallLine(WallLine *wall) {
@@ -509,6 +521,7 @@ Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
 void RaySegment::findIntersections(Room *room, Wall *originWall) {
     Vector2 closestHit = {NAN, NAN};
     float minDist = MAXFLOAT;
+    Wall *closestWall = nullptr;
 
     for (Wall *wall : room->getWalls()) {
         Vector2 intersection = {NAN, NAN};
@@ -527,6 +540,7 @@ void RaySegment::findIntersections(Room *room, Wall *originWall) {
             if (dist > 0.1f && dist < minDist) {
                 minDist = dist;
                 closestHit = intersection;
+                closestWall = wall;
             }
         }
     }
@@ -534,6 +548,24 @@ void RaySegment::findIntersections(Room *room, Wall *originWall) {
     if (!isnan(closestHit.x) && !isnan(closestHit.y)) {
         hasHit = true;
         hitPoint = closestHit;
+        hitWall = closestWall;
+
+        // Создаем следующий сегмент, если не превышен лимит глубины
+        if (depth < 3) {
+            Vector2 normal = hitWall->getNormal(hitPoint);
+            Vector2 incident =
+                Vector2Normalize(Vector2Subtract(hitPoint, start));
+
+            // Отражение: r = d - 2(d·n)n
+            float dotProduct = Vector2DotProduct(incident, normal);
+            Vector2 reflected =
+                Vector2Subtract(incident, Vector2Scale(normal, 2 * dotProduct));
+
+            Vector2 nextEnd =
+                Vector2Add(hitPoint, Vector2Scale(reflected, 10000.0f));
+            next = new RaySegment(hitPoint, nextEnd, depth + 1);
+            next->findIntersections(room, hitWall);
+        }
     } else {
         hasHit = false;
     }
@@ -590,7 +622,7 @@ void RayStart::updateRaySegments() {
     Vector2 normal = wall->getNormal(start);
     Vector2 rayDir = Vector2Rotate(normal, angle - PI / 2);
     Vector2 rayEnd = Vector2Add(start, Vector2Scale(rayDir, 10000.0f));
-    ray = new RaySegment(start, rayEnd);
+    ray = new RaySegment(start, rayEnd, 0);
     ray->findIntersections(wall->room, wall);
 }
 
@@ -799,17 +831,6 @@ Wall *Room::changeWallType(Wall *wall) {
     Point *start = wall->getStart();
     Point *end = wall->getEnd();
     bool isRound = dynamic_cast<WallRound *>(wall) != nullptr;
-
-    auto &startWalls = start->walls;
-    auto &endWalls = end->walls;
-
-    startWalls.erase(
-        std::remove(startWalls.begin(), startWalls.end(), wall),
-        startWalls.end()
-    );
-    endWalls.erase(
-        std::remove(endWalls.begin(), endWalls.end(), wall), endWalls.end()
-    );
 
     Wall *bind = wall;
 

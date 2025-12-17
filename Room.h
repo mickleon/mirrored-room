@@ -20,8 +20,6 @@ private:
     Vector2 coord;        // Ее координаты
     vector<Wall *> walls; // Связанные с ней стены
 
-    friend class Room;
-
 public:
     Point(const Vector2 &coord);
     Point(const json &j); // Конструктор из json
@@ -150,7 +148,6 @@ public:
 
     bool isPointOnArc(const Vector2 &point, float precision = 0.1f);
 
-    // Новые методы для доступа к параметрам дуги
     Vector2 getCenter();
     float getRadius();
     float getStartAngle();
@@ -161,20 +158,26 @@ public:
     void draw();
 };
 
+// Класс сегмента луча
 class RaySegment {
 private:
-    Vector2 start;
-    Vector2 end;
-    bool hasHit;      // Было ли столкновение со стеной
+    Vector2 start; // Точка начала
+    Vector2 end;   // Точка конца (большие координаты чтобы гарантированно найти
+                   // пересечение)
+    bool hasHit;   // Было ли столкновение со стеной
     Vector2 hitPoint; // Точка столкновения (если есть)
+    Wall *hitWall;    // Стена, с которой произошло столкновение
+    RaySegment *next; // Следующий сегмент луча
+    int depth;        // Порядок сегмента луча
 
     Vector2 intersectionWithWallLine(WallLine *wall);
     Vector2 intersectionWithWallRound(WallRound *wall);
 
 public:
-    RaySegment(const Vector2 &start, const Vector2 &end);
+    RaySegment(const Vector2 &start, const Vector2 &end, int depth = 0);
     void findIntersections(Room *room, Wall *originWall);
     void draw() const;
+    ~RaySegment();
 };
 
 // Класс вершины луча
