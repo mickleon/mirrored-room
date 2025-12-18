@@ -538,7 +538,6 @@ bool Room::isClosed() {
 
 WallLine *Room::addWallLine(const Vector2 &coord) {
     int pointsAmount = points.size();
-    WallLine *outputWall = nullptr;
 
     for (size_t i = 0; i < pointsAmount; ++i) {
         float d = Vector2Distance(points[i].getCoord(), coord);
@@ -550,7 +549,10 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
                 WallLine *wall =
                     new WallLine(&points[pointsAmount - 1], &points[0], this);
                 walls.push_back(wall);
-                outputWall = wall;
+                if (rayStart) {
+                    rayStart->updateParams();
+                }
+                return wall;
             } else {
                 throw Room::PointsAreTooClose();
             }
@@ -561,6 +563,20 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
         throw Room::TooManyPoints();
     }
 
+    // if (walls.size()) {
+    //     Vector2 collision = {-1, -1};
+    //     for (Wall *wall : walls) {
+    //         if (CheckCollisionLines(
+    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
+    //                 points[pointsAmount - 1].getCoord(), coord, &collision
+    //             ) &&
+    //             collision.x != points[pointsAmount - 1].getX() &&
+    //             collision.y != points[pointsAmount - 1].getY()) {
+    //             throw Room::WallsCollision();
+    //         }
+    //     }
+    // }
+
     points.push_back(coord);
     ++pointsAmount;
     if (pointsAmount > 1) {
@@ -568,20 +584,17 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
             &points[pointsAmount - 2], &points[pointsAmount - 1], this
         );
         walls.push_back(wall);
-        outputWall = wall;
+        if (rayStart) {
+            rayStart->updateParams();
+        }
+        return wall;
     }
 
-    if (rayStart) {
-        rayStart->updateParams();
-    }
-
-    return outputWall;
+    return nullptr;
 }
 
 WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
     int pointsAmount = points.size();
-
-    WallRound *outputWall = nullptr;
 
     for (size_t i = 0; i < pointsAmount; ++i) {
         float d = Vector2Distance(points[i].getCoord(), coord);
@@ -594,16 +607,33 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
                     &points[pointsAmount - 1], &points[0], this, radiusCoef
                 );
                 walls.push_back(wall);
-                outputWall = wall;
+                if (rayStart) {
+                    rayStart->updateParams();
+                }
+                return wall;
             } else {
                 throw Room::PointsAreTooClose();
             }
         }
     }
 
-    if (pointsAmount > maximumPoints) {
+    if (pointsAmount >= maximumPoints) {
         throw Room::TooManyPoints();
     }
+
+    // if (walls.size()) {
+    //     Vector2 collision = {-1, -1};
+    //     for (Wall *wall : walls) {
+    //         if (CheckCollisionLines(
+    //                 wall->getStart()->getCoord(), wall->getEnd()->getCoord(),
+    //                 points[pointsAmount - 1].getCoord(), coord, &collision
+    //             ) &&
+    //             collision.x != points[pointsAmount - 1].getX() &&
+    //             collision.y != points[pointsAmount - 1].getY()) {
+    //             throw Room::WallsCollision();
+    //         }
+    //     }
+    // }
 
     points.push_back(coord);
     ++pointsAmount;
@@ -613,14 +643,13 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
             radiusCoef
         );
         walls.push_back(wall);
-        outputWall = wall;
+        if (rayStart) {
+            rayStart->updateParams();
+        }
+        return wall;
     }
 
-    if (rayStart) {
-        rayStart->updateParams();
-    }
-
-    return outputWall;
+    return nullptr;
 }
 
 Wall *Room::changeWallType(Wall *wall) {
