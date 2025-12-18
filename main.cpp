@@ -111,6 +111,14 @@ int main() {
             }
         }
 
+        // Добавление цели
+        if (ui.getMode() == MyUI::UI_ADD_AIM) {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&
+                CheckCollisionPointRec(GetMousePosition(), ui.getCanvas())) {
+                room->addAim(GetMousePosition());
+            }
+        }
+
         // Добавление луча
         if (ui.getMode() == MyUI::UI_ADD_RAY) {
             if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) &&

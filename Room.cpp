@@ -457,7 +457,8 @@ Room::Room(const json &j) {
     if (j.at("points").size() > 0) {
         points.push_back(Point(j.at("points").at(0)));
         size_t i = 0;
-        for (const auto &wall : j.at("walls")) {
+        for (size_t ind = 1; ind < j.at("walls").size(); ++ind) {
+            const auto &wall = j.at("walls").at(ind);
             if (j.at("points").size() == i + 1) {
                 const auto &point = j.at("points").at(0);
                 if (wall.at("type") == "line") {
@@ -493,18 +494,18 @@ Room::Room(const json &j) {
         }
     }
 
-    if (j.contains("rayStart")) {
-        json ray = j["rayStart"];
-        addRay(Vector2{ray.at("start").at("x"), ray.at("start").at("y")});
-        rayStart->setAngle(ray.at("angle"));
-    }
-
     if (j.contains("aim")) {
         json aim = j["aim"];
         addAim(
             {aim.at("center").at("x"), aim.at("center").at("y")},
             aim.at("radius")
         );
+    }
+
+    if (j.contains("rayStart")) {
+        json ray = j["rayStart"];
+        addRay(Vector2{ray.at("start").at("x"), ray.at("start").at("y")});
+        rayStart->setAngle(ray.at("angle"));
     }
 }
 
@@ -725,6 +726,10 @@ json Room::toJson() {
         j["rayStart"] = rayStart->toJson();
     }
 
+    if (aim) {
+        j["aim"] = aim->toJson();
+    }
+
     for (Point &point : points) {
         j["points"].push_back(point.toJson());
     }
@@ -758,6 +763,8 @@ void Room::clear() {
     walls.clear();
     delete rayStart;
     rayStart = nullptr;
+    delete aim;
+    aim = nullptr;
 }
 
 Room::~Room() {
@@ -771,11 +778,17 @@ void Room::addAim(const Vector2 &center, float radius) {
         delete aim;
     }
     aim = new AimArea(center, radius);
+    if (rayStart) {
+        rayStart->updateParams();
+    }
 }
 
 void Room::moveAim(const Vector2 &newCenter) {
     if (aim) {
         aim->setCenter(newCenter);
+    }
+    if (rayStart) {
+        rayStart->updateParams();
     }
 }
 

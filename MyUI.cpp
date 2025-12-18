@@ -293,6 +293,11 @@ void MyUI::setMode(UIMode newMode) {
         SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
         break;
     }
+    case UI_ADD_AIM: {
+        mode = UI_ADD_AIM;
+        SetMouseCursor(UI_ADD_AIM);
+        break;
+    }
     case MyUI::UI_EDIT_LINE: {
         mode = UI_EDIT_LINE;
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
@@ -356,6 +361,10 @@ void MyUI::handleButtons(bool isClosed) {
 
     if (addRayButton.draw(getMode() == UI_ADD_RAY)) {
         setMode(UI_ADD_RAY);
+    }
+
+    if (addAimButton.draw(getMode() == UI_ADD_AIM)) {
+        setMode(UI_ADD_AIM);
     }
 
     if (clearButton.draw()) {

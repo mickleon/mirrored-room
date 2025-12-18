@@ -96,25 +96,41 @@ void RaySegment::updateParameters(Room *room) {
     Vector2 closestHit = {NAN, NAN};
     float minDist = MAXFLOAT;
     Wall *closestWall = nullptr;
+    bool hitAimArea = false;
 
-    for (Wall *wall : room->getWalls()) {
-        Vector2 intersection = {NAN, NAN};
-
-        WallLine *wallLine = dynamic_cast<WallLine *>(wall);
-        WallRound *wallRound = dynamic_cast<WallRound *>(wall);
-
-        if (wallLine) {
-            intersection = intersectionWithWallLine(wallLine);
-        } else if (wallRound) {
-            intersection = intersectionWithWallRound(wallRound);
-        }
-
-        if (!isnan(intersection.x) && !isnan(intersection.y)) {
-            float dist = Vector2Distance(start, intersection);
+    if (room->aim) {
+        Vector2 aimIntersection;
+        if (room->isRayInAim(start, end, aimIntersection)) {
+            float dist = Vector2Distance(start, aimIntersection);
             if (dist > 0.1f && dist < minDist) {
                 minDist = dist;
-                closestHit = intersection;
-                closestWall = wall;
+                closestHit = aimIntersection;
+                hitAimArea = true; // Помечаем, что попали в область цели
+            }
+        }
+    }
+
+    for (Wall *wall : room->getWalls()) {
+        if (!hitAimArea || Vector2Distance(start, closestHit) > 0) {
+            Vector2 intersection = {NAN, NAN};
+
+            WallLine *wallLine = dynamic_cast<WallLine *>(wall);
+            WallRound *wallRound = dynamic_cast<WallRound *>(wall);
+
+            if (wallLine) {
+                intersection = intersectionWithWallLine(wallLine);
+            } else if (wallRound) {
+                intersection = intersectionWithWallRound(wallRound);
+            }
+
+            if (!isnan(intersection.x) && !isnan(intersection.y)) {
+                float dist = Vector2Distance(start, intersection);
+                if (dist > 0.5f && dist < minDist) {
+                    minDist = dist;
+                    closestHit = intersection;
+                    closestWall = wall;
+                    hitAimArea = false;
+                }
             }
         }
     }
@@ -124,7 +140,11 @@ void RaySegment::updateParameters(Room *room) {
         hitPoint = closestHit;
         hitWall = closestWall;
 
-        if (depth <= hitWall->room->maximumRayDepth) {
+        if (hitAimArea) {
+            return;
+        }
+
+        if (hitWall && depth <= hitWall->room->maximumRayDepth) {
             Vector2 normal = hitWall->getNormal(hitPoint);
             Vector2 incident =
                 Vector2Normalize(Vector2Subtract(hitPoint, start));
@@ -275,7 +295,7 @@ bool AimArea::containsPoint(const Vector2 &point) {
 }
 
 json AimArea::toJson() {
-    return {"center", {{"x", center.x}, {"y", center.y}}, {"radius", radius}};
+    return {{"center", {{"x", center.x}, {"y", center.y}}}, {"radius", radius}};
 }
 
 void AimArea::draw() {

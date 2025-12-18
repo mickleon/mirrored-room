@@ -46,7 +46,8 @@ private:
     Button addLineButton = {Rectangle{125, 5, 30, 30}, "#23#"};
     Button addRoundButton = {Rectangle{160, 5, 30, 30}, "#22#"};
     Button addRayButton = {Rectangle{210, 5, 30, 30}, "#145#"};
-    Button clearButton = {Rectangle{260, 5, 30, 30}, "#24#"};
+    Button addAimButton = {Rectangle{260, 5, 30, 30}, "#64#"};
+    Button clearButton = {Rectangle{310, 5, 30, 30}, "#24#"};
 
 public:
     enum UIMode {
@@ -54,6 +55,7 @@ public:
         UI_ADD_LINE,
         UI_ADD_ROUND,
         UI_ADD_RAY,
+        UI_ADD_AIM,
         UI_EDIT_LINE,
         UI_EDIT_ROUND,
         UI_EDIT_RAY,
