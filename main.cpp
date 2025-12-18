@@ -9,6 +9,11 @@
 #include "Ray.h"
 #include "Room.h"
 
+const int Room::minimalDistance = 20;
+const int Room::maximumPoints = 9;
+const int Room::minimumPoints = 4;
+const int Room::maximumRayDepth = 10;
+
 int main() {
     MyUI ui =
         MyUI("assets/fonts/AdwaitaSans-Regular.ttf", "assets/iconset.rgi");

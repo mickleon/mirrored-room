@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <exception>
 #include <vector>
 
@@ -16,6 +17,7 @@ class Room;
 class WallLine;
 class WallRound;
 class RayStart;
+class AimArea;
 
 // Класс точек между зеркальнымы стенами
 class Point {
@@ -37,9 +39,11 @@ public:
 
     void addWall(Wall *wall);
 
-    json to_json(); // Экспорт в json
+    json toJson(); // Экспорт в json
 
     void draw();
+
+    void clear(Wall *wall); // Удаляет из связанных стену
 };
 
 // Абстрактный класс зеркальной стены
@@ -56,7 +60,7 @@ public:
 
     virtual void draw() {}
 
-    virtual json to_json() { return json{}; } // Экспорт в json
+    virtual json toJson() { return json{}; } // Экспорт в json
 
     Point *getStart() { return start; }
 
@@ -77,6 +81,8 @@ public:
     virtual Vector2 getPointByT(
         float t
     ) = 0; // Получить точку на стене по параметру  t в диапазоне [0,1]
+
+    ~Wall();
 };
 
 // Прямая стена
@@ -94,7 +100,7 @@ public:
     float getTByPoint(const Vector2 &point, float presicion = 0.1f);
     Vector2 getPointByT(float t);
 
-    json to_json();
+    json toJson();
 
     void draw();
 };
@@ -156,7 +162,7 @@ public:
     float getStartAngle();
     float getEndAngle();
 
-    json to_json();
+    json toJson();
 
     void draw();
 };
@@ -171,6 +177,14 @@ public:
     RayStart *rayStart = nullptr;
     float defaultRayAngle = PI / 2;
 
+    AimArea *aim = nullptr;
+    void addAim(const Vector2 &center, float radius = 20.0f);
+    void moveAim(const Vector2 &newCenter);
+    bool isRayInAim(
+        const Vector2 &rayStart, const Vector2 &rayEnd,
+        Vector2 &intersectionPoint
+    );
+
     Room();
     Room(const json &j); // Конструктор из json
 
@@ -180,8 +194,9 @@ public:
     const int static minimalDistance; // Минимальное расстояние, на котором
                                       // рядом могут находиться точки
 
-    const int static maximumPoints; // Максимальное число точек в комнате
-    const int static minimumPoints; // Максимальное число точек в комнате
+    const int static maximumPoints;   // Максимальное число точек в комнате
+    const int static minimumPoints;   // Максимальное число точек в комнате
+    const int static maximumRayDepth; // Максимальное число переотражений
 
     class RoomException: public std::exception {
     public:
@@ -229,7 +244,7 @@ public:
 
     void draw();
 
-    json to_json(); // Экспорт в json
+    json toJson(); // Экспорт в json
 
     void addRay(const Vector2 &point);
 

@@ -151,7 +151,7 @@ void MyUI::saveFile(Room *room) {
         );
     }
 
-    file << room->to_json().dump(2) << '\n';
+    file << room->toJson().dump(2) << '\n';
 
     if (file.fail()) {
         throw runtime_error(
@@ -187,17 +187,18 @@ void MyUI::drawPanel() {
 
         GuiPanel(panel, "Свойства зеркала");
         if (wallRound) {
+            // Кнопка типа стены
             if (GuiButton(typeButton, "Тип: сферическое")) {
                 wall = wall->room->changeWallType(wall);
             }
 
-            // Кнопка
+            // Кнопка измеения выпуклости
             Rectangle orientButton = {panel.x + 20, panel.y + 140, 260, 30};
             if (GuiButton(orientButton, "Изменить выпуклость")) {
                 wallRound->toggleOrient();
             }
 
-            // Ползунок
+            // Ползунок радиуса
             float sliderValue = wallRound->getRadiusCoef();
             float newSliderValue = sliderValue;
             Rectangle slider = {panel.x + 100, panel.y + 90, 135, 25};
@@ -215,7 +216,7 @@ void MyUI::drawPanel() {
         }
     } else if (rayStart) {
         GuiPanel(panel, "Свойства луча");
-        // Ползунок
+        // Ползунок угла
         float sliderValue = rayStart->getAngle() * RAD2DEG;
         float newSliderValue = sliderValue;
         Rectangle slider = {panel.x + 70, panel.y + 50, 165, 25};
@@ -227,6 +228,12 @@ void MyUI::drawPanel() {
             rayStart->setAngle(newSliderValue * DEG2RAD);
             rayStart->getWall()->room->defaultRayAngle =
                 newSliderValue * DEG2RAD;
+        }
+
+        // Кнопка изменения направления
+        Rectangle directButton = {panel.x + 20, panel.y + 100, 260, 30};
+        if (GuiButton(directButton, "Изменить направление")) {
+            rayStart->inverseDirection();
         }
     } else {
         GuiPanel(panel, "");

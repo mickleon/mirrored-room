@@ -1,7 +1,11 @@
 #pragma once
 
-#include "Room.h"
+#include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
+
+#include "Room.h"
+
+using nlohmann::json;
 
 class Wall;
 class WallLine;
@@ -18,14 +22,14 @@ private:
     Vector2 hitPoint; // Точка столкновения (если есть)
     Wall *hitWall;    // Стена, с которой произошло столкновение
     RaySegment *next; // Следующий сегмент луча
-    int depth;        // Порядок сегмента луча
+    int depth;        // Число переторажений
 
     Vector2 intersectionWithWallLine(WallLine *wall);
     Vector2 intersectionWithWallRound(WallRound *wall);
 
 public:
-    RaySegment(const Vector2 &start, const Vector2 &end, int depth = 0);
-    void findIntersections(Room *room, Wall *originWall);
+    RaySegment(const Vector2 &start, const Vector2 &end, int depth = 1);
+    void updateParameters(Room *room);
     void draw() const;
     ~RaySegment();
 };
@@ -37,6 +41,7 @@ class RayStart {
     Wall *wall;  // Родительская стена
     float t;
     RaySegment *ray = nullptr;
+    bool inverted;
 
 public:
     RayStart(const Vector2 &point, Wall *wall, float angle);
@@ -65,10 +70,42 @@ public:
     void setAngle(float angle);
     void setWall(Wall *wall);
     void inverseT();
+    void inverseDirection();
     void updateRaySegments();
     void updateParams();
+
+    json toJson(); // Экспорт в json
 
     void draw();
 
     ~RayStart();
+};
+
+// Класс области цели (круг)
+class AimArea {
+private:
+    Vector2 center; // Центр круга
+    float radius;   // Радиус кругa
+
+public:
+    AimArea(const Vector2 &center, float radius = 20.0f);
+
+    Vector2 getCenter() { return center; }
+
+    float getRadius() { return radius; }
+
+    void setCenter(const Vector2 &center);
+
+    bool intersectsWithRay(
+        const Vector2 &rayStart, const Vector2 &rayEnd,
+        Vector2 &intersectionPoint
+    );
+
+    bool containsPoint(
+        const Vector2 &point
+    ); // Проверка, находится ли точка внутри области
+
+    json toJson();
+
+    void draw();
 };

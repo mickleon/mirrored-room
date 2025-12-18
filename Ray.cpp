@@ -1,5 +1,6 @@
 #include <cmath>
 
+#include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
 #include "raymath.h"
 
@@ -78,37 +79,10 @@ Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
     float minT = MAXFLOAT;
 
     for (float t : {t1, t2}) {
-        if (t >= 0.0f && t <= 1.0f && t < minT) {
+        if (t >= 0.0001f && t <= 1.0f && t < minT) {
             Vector2 point = Vector2{start.x + t * d.x, start.y + t * d.y};
 
-            Vector2 diff = Vector2Subtract(point, center);
-            float angle = atan2f(diff.y, diff.x) * RAD2DEG;
-
-            if (angle < 0) {
-                angle += 360.0f;
-            }
-
-            float startAngle = wall->getStartAngle();
-            float endAngle = wall->getEndAngle();
-
-            float normStart = fmodf(startAngle, 360.0f);
-            float normEnd = fmodf(endAngle, 360.0f);
-            if (normStart < 0) {
-                normStart += 360.0f;
-            }
-            if (normEnd < 0) {
-                normEnd += 360.0f;
-            }
-
-            bool isInArc = false;
-
-            if (normEnd >= normStart) {
-                isInArc = (angle >= normStart && angle <= normEnd);
-            } else {
-                isInArc = (angle >= normStart || angle <= normEnd);
-            }
-
-            if (isInArc) {
+            if (wall->isPointOnArc(point, 0.1f)) {
                 closestIntersection = point;
                 minT = t;
             }
@@ -118,7 +92,7 @@ Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
     return closestIntersection;
 }
 
-void RaySegment::findIntersections(Room *room, Wall *originWall) {
+void RaySegment::updateParameters(Room *room) {
     Vector2 closestHit = {NAN, NAN};
     float minDist = MAXFLOAT;
     Wall *closestWall = nullptr;
@@ -150,13 +124,11 @@ void RaySegment::findIntersections(Room *room, Wall *originWall) {
         hitPoint = closestHit;
         hitWall = closestWall;
 
-        // Создаем следующий сегмент, если не превышен лимит глубины
-        if (depth < 3) {
+        if (depth <= hitWall->room->maximumRayDepth) {
             Vector2 normal = hitWall->getNormal(hitPoint);
             Vector2 incident =
                 Vector2Normalize(Vector2Subtract(hitPoint, start));
 
-            // Отражение: r = d - 2(d·n)n
             float dotProduct = Vector2DotProduct(incident, normal);
             Vector2 reflected =
                 Vector2Subtract(incident, Vector2Scale(normal, 2 * dotProduct));
@@ -164,7 +136,7 @@ void RaySegment::findIntersections(Room *room, Wall *originWall) {
             Vector2 nextEnd =
                 Vector2Add(hitPoint, Vector2Scale(reflected, 10000.0f));
             next = new RaySegment(hitPoint, nextEnd, depth + 1);
-            next->findIntersections(room, hitWall);
+            next->updateParameters(room);
         }
     } else {
         hasHit = false;
@@ -194,6 +166,7 @@ RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
         throw InvalidAngle();
     }
     RayStart::angle = angle;
+    inverted = false;
     updateRaySegments();
 }
 
@@ -215,20 +188,32 @@ void RayStart::inverseT() {
     updateParams();
 }
 
+void RayStart::inverseDirection() {
+    inverted = !inverted;
+    updateRaySegments();
+}
+
 void RayStart::updateRaySegments() {
     if (ray) {
         delete ray;
     }
     Vector2 normal = wall->getNormal(start);
+    if (inverted) {
+        normal = Vector2Scale(normal, -1.0f);
+    }
     Vector2 rayDir = Vector2Rotate(normal, angle - PI / 2);
     Vector2 rayEnd = Vector2Add(start, Vector2Scale(rayDir, 10000.0f));
-    ray = new RaySegment(start, rayEnd, 0);
-    ray->findIntersections(wall->room, wall);
+    ray = new RaySegment(start, rayEnd, 1);
+    ray->updateParameters(wall->room);
 }
 
 void RayStart::updateParams() {
     start = wall->getPointByT(t);
     updateRaySegments();
+}
+
+json RayStart::toJson() {
+    return {{"angle", angle}, {"start", {{"x", start.x}, {"y", start.y}}}};
 }
 
 void RayStart::draw() {
@@ -238,4 +223,61 @@ void RayStart::draw() {
 
 RayStart::~RayStart() {
     delete ray;
+}
+
+AimArea::AimArea(const Vector2 &center, float radius):
+    center(center),
+    radius(radius) {}
+
+void AimArea::setCenter(const Vector2 &center) {
+    this->center = center;
+}
+
+bool AimArea::intersectsWithRay(
+    const Vector2 &rayStart, const Vector2 &rayEnd, Vector2 &intersectionPoint
+) {
+    Vector2 d = Vector2Subtract(rayEnd, rayStart);
+    Vector2 f = Vector2Subtract(rayStart, center);
+
+    float a = Vector2DotProduct(d, d);
+    float b = 2 * Vector2DotProduct(f, d);
+    float c = Vector2DotProduct(f, f) - radius * radius;
+
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant < 0) {
+        return false;
+    }
+
+    discriminant = sqrtf(discriminant);
+    float t1 = (-b - discriminant) / (2 * a);
+    float t2 = (-b + discriminant) / (2 * a);
+
+    float t = MAXFLOAT;
+
+    if (t1 >= 0 && t1 <= 1 && t1 < t) {
+        t = t1;
+    }
+    if (t2 >= 0 && t2 <= 1 && t2 < t) {
+        t = t2;
+    }
+
+    if (t < MAXFLOAT) {
+        intersectionPoint = Vector2{rayStart.x + t * d.x, rayStart.y + t * d.y};
+        return true;
+    }
+
+    return false;
+}
+
+bool AimArea::containsPoint(const Vector2 &point) {
+    return Vector2Distance(point, center) <= radius;
+}
+
+json AimArea::toJson() {
+    return {"center", {{"x", center.x}, {"y", center.y}}, {"radius", radius}};
+}
+
+void AimArea::draw() {
+    DrawCircleV(center, radius, Fade(GREEN, 0.3f));
 }
