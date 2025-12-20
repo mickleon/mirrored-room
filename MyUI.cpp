@@ -121,10 +121,11 @@ Room *MyUI::openFIle(Room *room) {
 
     room = newRoom;
 
-    showHint(TextFormat(
-        "Комната успешно загружена из файла %s",
-        fileDialog.filePath().filename().c_str()
-    ));
+    showHint((
+        string("Комната успешно загружена из файла ") +
+              fileDialog.filePath().filename().string()
+        ).c_str()
+    );
     return room;
 }
 
@@ -160,10 +161,11 @@ void MyUI::saveFile(Room *room) {
 
     file.close();
 
-    showHint(TextFormat(
-        "Файл %s успешно экспортирован",
-        fileDialog.filePath().filename().c_str()
-    ));
+    showHint((
+        string("Комната успешно сохранена в файл ") +
+              fileDialog.filePath().filename().string()
+        ).c_str()
+    );
 }
 
 void MyUI::showHint(const char *message) {
