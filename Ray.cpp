@@ -1,5 +1,6 @@
-#include <math.h>
+#include <cfloat>
 #include <climits>
+#include <math.h>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"

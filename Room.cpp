@@ -1,5 +1,6 @@
-#include <math.h>
+#include <cfloat>
 #include <climits>
+#include <math.h>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
@@ -170,9 +171,7 @@ json WallRound::toJson() {
 }
 
 void WallRound::draw() {
-    DrawRing(
-        center, radius - 2, radius + 2, startAngle, endAngle, 36, BROWN
-    );
+    DrawRing(center, radius - 2, radius + 2, startAngle, endAngle, 36, BROWN);
 }
 
 float Wall::distanceToWall(const Vector2 &point) {
