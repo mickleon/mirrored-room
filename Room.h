@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cmath>
 #include <exception>
+#include <math.h>
 #include <vector>
 
 #include "nlohmann/json.hpp"
@@ -129,7 +129,9 @@ class WallRound: public Wall {
     float getTByAngle(float angleDeg);
 
 public:
-    WallRound(Point *start, Point *end, Room *room, float radiusCoef);
+    WallRound(
+        Point *start, Point *end, Room *room, float radiusCoef, bool orient
+    );
 
     class InvalidRadiusCoef:
         public std::exception { // Исключение, выбрасывается, когда неверный
@@ -232,7 +234,7 @@ public:
         const Vector2 &coord
     );
     WallRound* addWallRound( // Добавить в конец ломаной cферическую стену
-        const Vector2 &coord, float radiusCoef = 50
+        const Vector2 &coord, float radiusCoef = 50, bool orient = false
     );
 
     Wall *changeWallType(Wall *wall);
@@ -245,7 +247,7 @@ public:
 
     json toJson(); // Экспорт в json
 
-    void addRay(const Vector2 &point);
+    void addRay(const Vector2 &point, bool inverted = false);
 
     vector<Wall *> &getWalls(); // Получить доступ к стенам
 

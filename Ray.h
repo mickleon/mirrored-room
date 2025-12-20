@@ -44,7 +44,9 @@ class RayStart {
     bool inverted;
 
 public:
-    RayStart(const Vector2 &point, Wall *wall, float angle);
+    RayStart(
+        const Vector2 &point, Wall *wall, float angle, bool inverted = false
+    );
 
     class InvalidAngle: public std::exception { // Исключение, выбрасывается,
                                                 // когда неверный угол

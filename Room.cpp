@@ -1,8 +1,8 @@
+#include <math.h>
+
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
 #include "raymath.h"
-#include <cmath>
-#include <cstddef>
 
 #include "Ray.h"
 #include "Room.h"
@@ -130,11 +130,12 @@ void WallRound::updateAngles() {
 }
 
 WallRound::WallRound(
-    Point *start, Point *end, Room *room, float radiusCoef = 50
+    Point *start, Point *end, Room *room, float radiusCoef = 50,
+    bool orient = false
 ):
     Wall(start, end, room) {
     isBig = false;
-    orient = false;
+    WallRound::orient = orient;
     if (radiusCoef < 0 || radiusCoef > 100) {
         throw InvalidRadiusCoef();
     }
@@ -144,7 +145,7 @@ WallRound::WallRound(
 
 void WallRound::toggleOrient() {
     orient = !orient;
-    if (room->rayStart) {
+    if (room->rayStart && room->rayStart->getWall() == this) {
         room->rayStart->inverseT();
     }
     updateParams();
@@ -159,7 +160,9 @@ void WallRound::setRadiusCoef(float radiusCoef) {
 }
 
 json WallRound::toJson() {
-    json j = {{"type", "round"}, {"radiusCoef", radiusCoef}};
+    json j = {
+        {"type", "round"}, {"radiusCoef", radiusCoef}, {"orient", orient}
+    };
 
     return j;
 }
@@ -448,47 +451,28 @@ Room::Room() {
 }
 
 Room::Room(const json &j) {
-    if (!j.at("points").is_array() || !j.at("walls").is_array()) {
+    const auto &points_j = j.at("points");
+    const auto &walls_j = j.at("walls");
+    if (!walls_j.is_array() || !points_j.is_array()) {
         throw std::runtime_error("Неверный формат файла");
     }
 
     points.reserve(maximumPoints + 1);
 
-    if (j.at("points").size() > 0) {
-        points.push_back(Point(j.at("points").at(0)));
-        size_t i = 0;
-        for (size_t ind = 1; ind < j.at("walls").size(); ++ind) {
-            const auto &wall = j.at("walls").at(ind);
-            if (j.at("points").size() == i + 1) {
-                const auto &point = j.at("points").at(0);
-                if (wall.at("type") == "line") {
-                    addWallLine(Point(point).getCoord());
-                } else if (wall.at("type") == "round") {
-                    addWallRound(
-                        Point(point).getCoord(),
-                        wall.at("radiusCoef").get<float>()
-                    );
-                }
-                break;
-            }
-            const auto &point = j.at("points").at(++i);
-            if (wall.at("type") == "line") {
-                addWallLine(Point(point).getCoord());
-            } else if (wall.at("type") == "round") {
-                addWallRound(
-                    Point(point).getCoord(), wall.at("radiusCoef").get<float>()
-                );
-            }
-        }
+    if (points_j.size() > 0) {
+        points.push_back(Point(points_j.at(0)));
 
-        if (j.at("points").size() == j.at("walls").size()) {
-            const auto &point = j.at("points").at(0);
-            const auto &wall = j.at("walls").at(i);
+        for (size_t i = 0; i < walls_j.size(); ++i) {
+            const auto &wall = walls_j.at(i);
+            const auto &point =
+                (i + 1 < points_j.size()) ? points_j.at(i + 1) : points_j.at(0);
+
             if (wall.at("type") == "line") {
                 addWallLine(Point(point).getCoord());
             } else if (wall.at("type") == "round") {
                 addWallRound(
-                    Point(point).getCoord(), wall.at("radiusCoef").get<float>()
+                    Point(point).getCoord(), wall.at("radiusCoef").get<float>(),
+                    wall.at("orient")
                 );
             }
         }
@@ -504,7 +488,10 @@ Room::Room(const json &j) {
 
     if (j.contains("rayStart")) {
         json ray = j["rayStart"];
-        addRay(Vector2{ray.at("start").at("x"), ray.at("start").at("y")});
+        addRay(
+            Vector2{ray.at("start").at("x"), ray.at("start").at("y")},
+            ray.at("inverted")
+        );
         rayStart->setAngle(ray.at("angle"));
     }
 }
@@ -594,7 +581,8 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
     return nullptr;
 }
 
-WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
+WallRound *
+    Room::addWallRound(const Vector2 &coord, float radiusCoef, bool orient) {
     int pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
@@ -605,7 +593,8 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
                     throw Room::TooFewPoints();
                 }
                 WallRound *wall = new WallRound(
-                    &points[pointsAmount - 1], &points[0], this, radiusCoef
+                    &points[pointsAmount - 1], &points[0], this, radiusCoef,
+                    orient
                 );
                 walls.push_back(wall);
                 if (rayStart) {
@@ -641,7 +630,7 @@ WallRound *Room::addWallRound(const Vector2 &coord, float radiusCoef) {
     if (pointsAmount > 1) {
         WallRound *wall = new WallRound(
             &points[pointsAmount - 2], &points[pointsAmount - 1], this,
-            radiusCoef
+            radiusCoef, orient
         );
         walls.push_back(wall);
         if (rayStart) {
@@ -740,14 +729,15 @@ json Room::toJson() {
     return j;
 }
 
-void Room::addRay(const Vector2 &point) {
+void Room::addRay(const Vector2 &point, bool inverted) {
     Wall *closestWall = Room::closestWall(point);
     if (closestWall) {
         Vector2 closestPoint = closestWall->closestPoint(point);
         if (rayStart) {
             delete rayStart;
         }
-        rayStart = new RayStart(closestPoint, closestWall, defaultRayAngle);
+        rayStart =
+            new RayStart(closestPoint, closestWall, defaultRayAngle, inverted);
     }
 }
 

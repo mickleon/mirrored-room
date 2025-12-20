@@ -1,4 +1,4 @@
-#include <cmath>
+#include <math.h>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
@@ -171,7 +171,9 @@ const char *RayStart::CantStartInCorner::what() const noexcept {
     return "Нельзя разместить начало луча в углу команаты";
 }
 
-RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
+RayStart::RayStart(
+    const Vector2 &point, Wall *wall, float angle = PI / 2, bool inverted
+) {
     t = wall->getTByPoint(point);
     if (wall) {
         RayStart::wall = wall;
@@ -186,7 +188,7 @@ RayStart::RayStart(const Vector2 &point, Wall *wall, float angle = PI / 2) {
         throw InvalidAngle();
     }
     RayStart::angle = angle;
-    inverted = false;
+    RayStart::inverted = inverted;
     updateRaySegments();
 }
 
@@ -233,7 +235,11 @@ void RayStart::updateParams() {
 }
 
 json RayStart::toJson() {
-    return {{"angle", angle}, {"start", {{"x", start.x}, {"y", start.y}}}};
+    return {
+        {"angle", angle},
+        {"start", {{"x", start.x}, {"y", start.y}}},
+        {"inverted", inverted}
+    };
 }
 
 void RayStart::draw() {

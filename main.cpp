@@ -1,6 +1,6 @@
-#include "raylib.h"
-#include <cstdio>
 #include <exception>
+
+#include "raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 #undef RAYGUI_IMPLEMENTATION
