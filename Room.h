@@ -89,8 +89,6 @@ class WallLine: public Wall {
 public:
     WallLine(Point *start, Point *end, Room *room): Wall(start, end, room) {}
 
-    WallLine(const json &j); // Конструктор из json
-
     void updateParams() {}
 
     Vector2 closestPoint(const Vector2 &point);

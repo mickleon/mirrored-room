@@ -1,5 +1,5 @@
 #include <math.h>
-#include<climits>
+#include <climits>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
@@ -148,6 +148,7 @@ void WallRound::toggleOrient() {
     orient = !orient;
     if (room->rayStart && room->rayStart->getWall() == this) {
         room->rayStart->inverseT();
+        room->rayStart->inverseDirection();
     }
     updateParams();
 }
@@ -747,11 +748,17 @@ vector<Wall *> &Room::getWalls() {
 }
 
 void Room::clear() {
-    points.clear();
     for (Wall *wall : walls) {
+        if (wall->getStart()) {
+            wall->getStart()->clear(wall);
+        }
+        if (wall->getEnd()) {
+            wall->getEnd()->clear(wall);
+        }
         delete wall;
     }
     walls.clear();
+    points.clear();
     delete rayStart;
     rayStart = nullptr;
     delete aim;
@@ -759,9 +766,7 @@ void Room::clear() {
 }
 
 Room::~Room() {
-    for (Wall *wall : walls) {
-        delete wall;
-    }
+    clear();
 }
 
 void Room::addAim(const Vector2 &center, float radius) {
