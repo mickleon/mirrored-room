@@ -1,4 +1,5 @@
 #include <math.h>
+#include<climits>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
@@ -96,7 +97,7 @@ void WallRound::updateParams() {
     float dy = start->getY() - end->getY();
     chord = std::sqrt(dx * dx + dy * dy);
 
-    radius = chord * (77.0 / 2 / (radiusCoef + 10) + 3.0 / 20);
+    radius = chord * (77.0f / 2 / (radiusCoef + 10) + 3.0f / 20);
 
     float h = std::sqrt(radius * radius - chord * chord / 4);
     if (orient) {
@@ -169,7 +170,7 @@ json WallRound::toJson() {
 
 void WallRound::draw() {
     DrawRing(
-        center, radius - 2, radius + 2, startAngle, endAngle, 36.0f, BROWN
+        center, radius - 2, radius + 2, startAngle, endAngle, 36, BROWN
     );
 }
 
@@ -425,7 +426,7 @@ float WallRound::getEndAngle() {
 
 Wall *Room::closestWall(const Vector2 &point) {
     Wall *closeWall = nullptr;
-    float minDist = MAXFLOAT;
+    float minDist = FLT_MAX;
 
     for (Wall *wall : walls) {
         float dist = wall->distanceToWall(point);
@@ -525,7 +526,7 @@ bool Room::isClosed() {
 }
 
 WallLine *Room::addWallLine(const Vector2 &coord) {
-    int pointsAmount = points.size();
+    size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
         float d = Vector2Distance(points[i].getCoord(), coord);
@@ -583,7 +584,7 @@ WallLine *Room::addWallLine(const Vector2 &coord) {
 
 WallRound *
     Room::addWallRound(const Vector2 &coord, float radiusCoef, bool orient) {
-    int pointsAmount = points.size();
+    size_t pointsAmount = points.size();
 
     for (size_t i = 0; i < pointsAmount; ++i) {
         float d = Vector2Distance(points[i].getCoord(), coord);

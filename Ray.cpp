@@ -1,4 +1,5 @@
 #include <math.h>
+#include <climits>
 
 #include "nlohmann/json_fwd.hpp"
 #include "raylib.h"
@@ -76,7 +77,7 @@ Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
     float t2 = (-b + D) / (2 * a);
 
     Vector2 closestIntersection = {NAN, NAN};
-    float minT = MAXFLOAT;
+    float minT = FLT_MAX;
 
     for (float t : {t1, t2}) {
         if (t >= 0.0001f && t <= 1.0f && t < minT) {
@@ -94,7 +95,7 @@ Vector2 RaySegment::intersectionWithWallRound(WallRound *wall) {
 
 void RaySegment::updateParameters(Room *room) {
     Vector2 closestHit = {NAN, NAN};
-    float minDist = MAXFLOAT;
+    float minDist = FLT_MAX;
     Wall *closestWall = nullptr;
     bool hitAimArea = false;
 
@@ -279,7 +280,7 @@ bool AimArea::intersectsWithRay(
     float t1 = (-b - discriminant) / (2 * a);
     float t2 = (-b + discriminant) / (2 * a);
 
-    float t = MAXFLOAT;
+    float t = FLT_MAX;
 
     if (t1 >= 0 && t1 <= 1 && t1 < t) {
         t = t1;
@@ -288,7 +289,7 @@ bool AimArea::intersectsWithRay(
         t = t2;
     }
 
-    if (t < MAXFLOAT) {
+    if (t < FLT_MAX) {
         intersectionPoint = Vector2{rayStart.x + t * d.x, rayStart.y + t * d.y};
         return true;
     }
