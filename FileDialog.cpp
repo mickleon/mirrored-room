@@ -49,6 +49,7 @@ FileDialog::FileDialog():
     SelectFilePressed(false),
     CancelFilePressed(false),
     prevFilesListActive(-1),
+    itemFocused(-1),
     dialogMode(FILE_DIALOG_OPEN),
     dirFilesIcon(MAX_DIRECTORY_FILES) {
     // Init window data

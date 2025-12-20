@@ -19,9 +19,9 @@ public:
 class MyUI {
 private:
     Font font;
-    int fontSize = 20;
+    float fontSize = 20.0f;
 
-    Font initFont(const char *fontPath, int fontSize);
+    Font initFont(const char *fontPath, float fontSize);
     float rightPanelWidth = 300;
 
     std::string currentHint = "";

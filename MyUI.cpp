@@ -16,12 +16,12 @@ bool Button::draw() {
 bool Button::draw(bool isActive) {
     int status = GuiButton(rect, text);
     if (isActive) {
-        DrawRectangleRec(rect, ColorAlpha(BLUE, 0.2));
+        DrawRectangleRec(rect, ColorAlpha(BLUE, 0.2f));
     }
     return status;
 }
 
-Font MyUI::initFont(const char *fontPath, int fontSize) {
+Font MyUI::initFont(const char *fontPath, float fontSize) {
     int charsCount = 0;
     int* chars = LoadCodepoints(
         "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя"
@@ -83,7 +83,7 @@ Room *MyUI::openFIle(Room *room) {
 
     try {
         file >> j;
-    } catch (json::exception &e) {
+    } catch (json::exception) {
         throw runtime_error(
             "Ошибка формата файла: " + filePath.filename().string()
         );
@@ -107,7 +107,7 @@ Room *MyUI::openFIle(Room *room) {
 
     try {
         newRoom = new Room(j);
-    } catch (const Room::RoomException &e) {
+    } catch (const Room::RoomException) {
         throw runtime_error(
             "Некорректные данные в файле: " + filePath.filename().string()
         );
@@ -223,7 +223,7 @@ void MyUI::drawPanel() {
         Rectangle slider = {panel.x + 70, panel.y + 50, 165, 25};
         GuiSliderBar(
             slider, "Угол", TextFormat("%.0f°", sliderValue), &newSliderValue,
-            1.01, 179
+            1.01f, 179
         );
         if (sliderValue != newSliderValue) {
             rayStart->setAngle(newSliderValue * DEG2RAD);
@@ -302,6 +302,7 @@ void MyUI::setMode(UIMode newMode) {
     case MyUI::UI_EDIT_LINE: {
         mode = UI_EDIT_LINE;
         SetMouseCursor(MOUSE_CURSOR_DEFAULT);
+        break;
     }
     case MyUI::UI_EDIT_ROUND: {
         mode = UI_EDIT_ROUND;
